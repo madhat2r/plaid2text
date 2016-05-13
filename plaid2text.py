@@ -96,9 +96,7 @@ def _parse_args_and_config_file():
     """
 
     # Build preparser with only plaid account
-    preparser = argparse.ArgumentParser(prog='Plaid2Text',
-        # Turn off help in first parser because all options are not present
-        add_help=False)
+    preparser = argparse.ArgumentParser(prog='Plaid2Text',add_help=False)
     preparser.add_argument('plaid_account',
                            nargs='?',
                            help=('Nickname of Plaid account to use'
@@ -145,6 +143,7 @@ def _parse_args_and_config_file():
         # Don't surpress add_help here so it will handle -h
         # print script description with -h/--help
         description=__doc__,
+                                     parents=[preparser],
         # sort options alphabetically
         formatter_class=SortingHelpFormatter)
 
@@ -269,7 +268,8 @@ def _parse_args_and_config_file():
         ('specify a the starting date for transactions to be pulled; use in conjunction with --to-date to specify range'
          'Date format: YYYY-MM-DD'))
 
-    args = parser.parse_args(remaining_argv,args)
+    #NEED TO FIX - USING PARENTS causes file to be opened twice
+    args = parser.parse_args()
 
     args.journal_file = cm.find_first_file(args.journal_file,
                                           cm.FILE_DEFAULTS.journal_file)

@@ -1,0 +1,397 @@
+#+TITLE: Plaid2Text Documentation
+#+HTML_HEAD_EXTRA: <link rel="stylesheet" type="text/css" href="../../../css/readtheorg.css" />
+
+* Synopsis
+The purpose of this python script is to bring those of us who chose to use
+=command line accounting=, some of the benefits of more conventional accounting
+programs, namely the ability to pull our transaction information from supported
+institutions via automated means and format them into our preferred text syntax.
+Currently, this program supports [[http://ledger-cli.org/][Ledger]] and [[http://furius.ca/beancount/][Beancount]] syntax exports.
+
+To download transactions, we use [[http://www.plaid.com][Plaid]]. This program will help you setup your
+accounts and download transactions from the Plaid API. I have tried to make this
+as simple as possible to setup.
+
+Also, once downloaded, your transactions will be stored in a Mongo database. It
+is actually the transactions pulled from the database that we run though our
+syntax renderers. This is required to help keep track of which transaction we
+have already processed (as well as have records to reconstruct our files should
+the need arise).
+
+The main inspiration for the workings of the import part of the script came from
+the excellent [[https://github.com/quentinsf/icsv2ledger][icsv2ledger]]. I borrowed heavily from Quentin's excellent script in
+making this tool, and in some places shamelessly stole his code altogether.
+
+* Contributions
+Contributions are most welcome. I hope that this will pick up some traction in
+the community, and in the end we can all have a rock-solid program to help us
+with our accounting.
+
+* Requirements
+- Python           => 3.5
+  * PyMango        => 0.1.1
+  * prompt_toolkit => 0.57
+  * plaid-python   => 1.3.0
+- ledger-cli       => 3        (if using ledger syntax)
+- Beancount        => 2.0      (if using beancount syntax)
+- MongoDB          => 3.2.3
+
+I have only tested this on Linux. I have no desire to run this on Windows, but
+feel free to give it a shot, it may work. The same goes for Mac, although
+sometime in the future I may test on OSX.
+
+*Note*: python dependencies must be installed prior to running the script. All
+can be installed from =pip= or of course whatever means you wish to use.
+
+* Plaid
+Plaid is an API used in building web-based financial applications. It provides
+access to our transactions at a number of institutions. To get started with this
+program, you must sign up for a plaid account. Once you have done that Plaid
+will issue you some developer keys to use with their API. 
+
+The keys of interest are:
+- =client_id=: this is your developer ID
+- =secret=: this is your authentication token
+
+Once you have obtained your keys then use =plaid2text= to create your
+configuration file and save your keys into it. You can do this by simply
+invoking plaid2text without arguments. =./plaid2text= will prompt you for your
+keys and store them in your config file.
+
+A note about Plaid. Plaid is a paid service, but developers have access to the
+developer API without paying. The developer API has all the features of the
+production API. I have been using this for a few months now on my 6 accounts and
+everything is still working just fine. I did contact them about what the cost
+would be (and told them my use case), and was informed that a paid version comes
+to 0.25 USD per account, per month. That is still a heck-of-a-better deal than
+Quickbooks online in my opinion. I can get my 6 accounts for 1.50 USD per month,
+but like I mentioned, I have yet run into any caps on my developer account, so
+that maybe all I ever use.
+
+* Plaid2Text
+
+In order to use =plaid2text= you must have already followed the instructions in
+the Plaid section. Once you have your initial config in place, then let's get
+started in creating your first account.
+
+** Creating a Plaid Account
+In order to get transactions from Plaid, you must create an account. In order to
+create an account, you must authenticate yourself to your institution via your
+username and password, and also most institutions require some form of multi
+factor authentication, usually in the form of security questions, or codes sent
+to registered phone/email for the account. Using =plaid2text= this is easy to
+accomplish. 
+
+First issue the following command:
+
+=plaid2text account_nickname --create-account=
+
+As an example let's say I am setting up an account for my personal checking, and the
+institution I use is Chase. I might use this command to create it.
+
+=plaid2text chase_checking --create-account=
+
+This would allow me to setup and account with the nickname =chase_checking=. You
+will use the nickname for getting downloading and parsing transactions, so make
+it something meaningful for you.
+
+Once you have issued that command =plaid2text= will present you with a list of
+institutions from which to choose.
+
+#+BEGIN_SRC
+What bank is this account going to be for? 
+1   Bank of America
+2   Chase
+3   Wells Fargo
+4   Citi
+5   US Bank
+6   USAA
+7   American Express
+8   Navy Federal Credit Union
+9   SunTrust
+
+Enter Number [q to quit]:
+#+END_SRC
+
+In our example we will choose =2= and hit enter. This will take us to the
+authorization screen, and will prompt for your credentials and follow up with
+the multi factor authentication (if required). If you enter everything correctly
+you will have setup your first account in Plaid. The program will then prompt
+you for some default config options. Config options are covered in the proceeding
+sections.
+
+* Arguments Summary
+
+#+BEGIN_SRC
+plaid_account: (mandantory) this is the nickname you assigned when creating account
+outfile: output filename or stdout in your chosen snytax (ledger,beancount)
+#+END_SRC
+
+*Note*: the outfile will be _overwritten_ each time this is run so be careful
+that you do not erase your current journal file, or any other file of importance.
+
+* Options Summary
+A lot of these options also have an equivalent setting in the config file
+(=~/.config/plaid2text/config=). Where this happens the config file settings
+will be underscored versions of the command line long options: =--mappings-file=
+would become =mappings_file=. 
+
+Also, note that when there are both config setting and command line options, the
+command line options take precedence over config file settings.
+
+#+BEGIN_SRC
+  --accounts-file FILE  file which holds a list of account names (LEDGER ONLY)
+                        (default : ~/.config/plaid2text/accounts)
+  --all-transactions    pull all transactions even those who have been
+                        previously marked as processed (default: False)
+  --clear-screen, -C    clear screen for every transaction (default: False)
+  --cleared-character {*,!}
+                        character to clear a transaction (default: *)
+  --create-account      Create a new Plaid account using the plaid-account
+                        argument as the new nickname (Example: chase_savings)
+  --currency STR        the currency of amounts (default: USD )
+  --default-expense STR
+                        expense account used as default destination (default:
+                        Expenses:Unknown)
+  --download-transactions, -d
+                        download transactions into Mongo for given plaid
+                        account
+  --from-date STR       specify a the starting date for transactions to be
+                        pulled; use in conjunction with --to-date to specify
+                        rangeDate format: YYYY-MM-DD
+  --headers-file FILE   file which contains contents to be written to the top
+                        of the output file (default: ~/.config/plaid2text/headers)
+  --journal-file FILE, -j FILE
+                        journal file where to read payees/accounts Tip: you
+                        can use includes to pull in your other journal files
+                        (default journal file: ~/.config/plaid2text/journal)
+  --mapping-file FILE   file which holds the mappings (default: ~/.config/plaid2text/mapping)
+  --mongo-db STR        The name of the Mongo database (default: plaid2text)
+  --no-mark-processed, -n
+                        Do not mark pulled transactions. When given, the
+                        pulled transactions will still be listed as new
+                        transactions upon the next run. (default: False)
+  --output-date-format STR
+                        date format for output file (default: YYYY/MM/DD)
+  --output-format {beancount,ledger}, -o {beancount,ledger}
+                        what format to use for the output file. (default
+                        format: beancount)
+  --posting-account STR, -a STR
+                        posting account used as source (default: Assets:Bank:Checking)
+  --quiet, -q           do not prompt if account can be deduced from mappings
+                        (default: False)
+  --tags, -t            prompt for transaction tags (default: False)
+  --template-file FILE  file which holds the template (default: ~/.config/plaid2text/template)
+  --to-date STR         specify the ending date for transactions to be pulled;
+                        use in conjunction with --from-date to specify
+                        rangeDate format: YYYY-MM-DD
+  -h, --help            show this help message and exit
+#+END_SRC
+
+** Options
+
+~--accounts-file~ 
+is a file that you can store predefined account definitions for Ledger in
+the form of =account Expenses:Unknown=. This file is parsed for the account
+names and all lines that do not start with *account* will be ignored.
+
+This is *LEDGER* specific setting. 
+
+~--all-transactions~ 
+will pull all transactions regardless if they are marked as already pulled.
+By default only transactions that have not been pulled to text are returned.
+
+~--clear-screen, -C~
+clears the screen before every transaction prompt. Default is ~False~.
+
+~--cleared-character {*,!}~
+is the character mark a transactions as cleared or not. Default is =*=
+
+~--create-account~
+is used to create a new account. See creating account section above for more.
+
+~--currency STR~
+is the currency used for transactions. Default is =USD=.
+
+~--default-expense STR~
+is the default account for which to post transactions to. Default
+=Expenses:Unknown=
+
+~--download-transactions, -d~
+fetches new transactions from Plaid into Mongo for given account.
+
+Use: =./plaid2text acct_nickname -d=
+
+~--from-date STR~
+specify a the starting date for transactions to be pulled.
+
+Use in conjunction with ~--to-date~ to specify range 
+
+Date format: YYYY-MM-DD or YYYY/MM/DD
+
+~--headers-file FILE~
+file which contains contents to be written to the top of the output file. For
+example, I store my beancount files as OrgMode files, so I have my headers file
+setup to insert instructions at the top for emacs, to help ease my editing of
+them once they are exported to text. And also I include my main beancount file
+which has all my accounts listed, this also allows for easy running of
+=bean-check= to verify the newly exported file.
+
+#+BEGIN_SRC
+;; -*- mode: org; mode: beancount; -*-  
+include "/path/to/somewhere/main.beancount"
+#+END_SRC
+
+Default: =~/.config/plaid2text/headers=
+
+~--journal-file FILE, -j FILE~
+journal file where to read payees/accounts. This could be your main ledger file
+or your main beancount file. 
+
+Tip: you can use includes to pull in your other journal files
+
+Default journal file: =~/.config/plaid2text/journal=
+
+~--mapping-file FILE~
+file which holds the mappings for matching transactions to accounts/payees as
+well as some default tags, if you want.
+
+You can have a separate mappings file per account.
+
+default: =~/.config/plaid2text/mapping=
+
+~--mongo-db STR~
+name of the Mongo database that stores downloaded transactions.
+
+Default: ~plaid2text~
+
+~--no-mark-processed, -n~
+will not mark pulled transactions as pulled. When passed, the pulled transactions will still be listed as new
+transactions upon the next run. 
+
+Default: ~False~
+
+~--output-date-format STR~
+date format for output file 
+
+Default: ~YYYY/MM/DD~
+
+~--output-format {beancount,ledger}, -o {beancount,ledger}~
+what syntax to use for the output file. 
+
+Default output format: beancount
+
+~--posting-account STR, -a STR~
+posting account used as source 
+
+Default: ~Assets:Bank:Checking~
+
+--quiet, -q           
+do not prompt if account can be deduced from mappings
+
+Default: ~False~
+
+~--tags, -t~
+causes the program to prompt for transaction tags 
+
+Default: ~False~
+
+~--template-file FILE~  
+file which holds the text template used in the output file for formatting transactions.
+
+Default: =~/.config/plaid2text/template=
+
+~--to-date STR~
+specify the ending date for transactions to be pulled. 
+
+use in conjunction with ~--from-date~ to specify range
+
+Date format: ~YYYY-MM-DD~ or ~YYYY/MM/DD~
+
+* Example Uses
+  
+The following will set up a new account with nickname =chase_checking=
+
+~./plaid2text chase_checking --create-account~
+
+The following will download all new transactions for the account
+=chase_checking=. 
+
+    *NOTE*: when downloading for the first time, be sure to wait at least 30min
+    after setting up the account. This gives Plaid time to pull your
+    transactions from the institution.
+
+~./plaid2text chase_checking --downlad-transactions~
+
+The following will pull all new  transactions for account
+=chase_checking= and output them to =/tmp/onetime.ldg= Ledger syntax
+after prompting you for the correct information for every transaction and
+marking all pulled transaction in the database as pulled.
+
+~./plaid2text chase_checking /tmp/onetime.ldg --output-format ledger~
+
+The following will pull *all* transactions starting from the given date for the
+=chase_checking= account and will not mark them as pulled in the database, and
+will output beancount syntax to stdout.
+
+~./plaid2text chase_checking --all-transactions --from-date 2015/04/15 --no-mark-processed~
+
+* Configuration Files
+** Main Configuration File
+This is an example config file that has an account setup that is nicknamed
+=chase_checking=. You will notice some settings that are obfuscated with xxx,
+these are created when setting up accounts, and are not entered manually.
+
+    [DEFAULT]
+    posting_account = Assets:Bank:Checking
+    default_expense = Expenses:Unknown
+    encoding = utf-8
+    currency = USD
+    mongo_db = plaid2text
+    quiet = False
+    tags = False
+    output_date_format = %%Y/%%m/%%d
+    clear_screen = False
+    cleared_character = *
+    output_format = beancount
+
+    [PLAID]
+    client_id = xxxxxxxa66710877xxxxxxxx
+    secret = xxxxxxxxx8c9a0cd27xxxxxxxxxxxx
+
+    [chase_checking]
+    access_token = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdf0fbb4cc4f5323f7ccd6
+    account = xxxxxxxxxxxxxPzJ3nAkFxxxxxxxxxxxxxxxx
+    currency = USD
+    posting_account = Assets:Bank:Chase:Checking
+    mapping_file = ~/.config/plaid2text/chase_checking/mapping_bc
+    headers_file = ~/.config/plaid2text/chase_checking/headers_bc
+    accounts_file = ~/somewhere/main.beancount
+    journal_file = ~/somewhere/beancount/main.beancount
+    template_file = ~/.config/plaid2text/chase_checking/template_bc
+ 
+** Template File
+
+** Headers File
+
+** Mappings File
+
+* DISCLAIMER
+This should be considered /*alpha*/ stage code. I have released it hoping that it
+will be of benefit to others in a similar situation as me. This version of the
+code is really hacked together and in need of serious refactoring, and will most
+likely contain bugs. I have had this working for myself for a few weeks, and
+have found it stable and usable. But I do caution you, to use at your own risk.
+
+** License
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but *WITHOUT ANY WARRANTY*; without even the implied warranty of
+*MERCHANTABILITY* or *FITNESS FOR A PARTICULAR PURPOSE*.  See the
+GNU General Public License for more details.
+
+You can obtain a copy of the license here: [[http://www.gnu.org/licenses/][GNU General Public License]] 
