@@ -294,7 +294,7 @@ posting account used as source
 
 Default: ~Assets:Bank:Checking~
 
---quiet, -q           
+~--quiet, -q~
 do not prompt if account can be deduced from mappings
 
 Default: ~False~
