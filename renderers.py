@@ -40,14 +40,13 @@ class Entry:
 
         amnt = self.transaction['amount']
         self.transaction['currency'] = currency = options.currency
-        self.transaction['debit_amount'] = amnt
-        self.transaction['debit_currency'] = currency
-        self.transaction['credit_amount'] = ''
-        self.transaction['credit_currency'] = ''
+        # self.transaction['debit_amount'] = amnt
+        # self.transaction['debit_currency'] = currency
+        # self.transaction['credit_amount'] = ''
+        # self.transaction['credit_currency'] = ''
 
 
 
-        self.transaction['credit_account'] = options.posting_account
         self.transaction['posting_account'] = options.posting_account
         self.transaction['cleared_character'] = options.cleared_character
 
@@ -72,10 +71,15 @@ class Entry:
         def_template = cm.DEFAULT_LEDGER_TEMPLATE if self.options.output_format == 'ledger' else cm.DEFAULT_BEANCOUNT_TEMPLATE
         template = (self.transaction['transaction_template'] if self.transaction['transaction_template']else
                     def_template)
+        if self.options.output_format == 'beancount':
+            ret_tags = tags if tags else ''
+        else:
+            ret_tags = '; {}'.format(tags) if tags else ''
+
         format_data = {
-            'debit_account': account,
+            'associated_account': account,
             'payee': payee,
-            'tags': '\n    ; '.join(tags),
+            'tags': ret_tags
         }
         format_data.update(self.transaction['addons'])
         format_data.update(self.transaction)
@@ -107,7 +111,7 @@ class OutputRenderer(metaclass=ABCMeta):
                 if options.output_format =='ledger':
                     self.possible_tags.update(set(m[3][0].split(':')))
                 else:
-                    self.possible_tags.update([t.replace('#','') for t in m[3][0].split()])
+                    self.possible_tags.update([t.replace('#','') for t in m[3][0].split(' ')])
 
     def read_mapping_file(self):
         """
@@ -144,7 +148,8 @@ class OutputRenderer(metaclass=ABCMeta):
         if self.map_file:
             with open(self.map_file, 'a', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([desc, payee, account,tags])
+                ret_tags = tags if len(tags ) > 0 else ''
+                writer.writerow([desc, payee, account,ret_tags])
 
 
     def process_transactions(self):
@@ -192,7 +197,7 @@ class OutputRenderer(metaclass=ABCMeta):
     def get_payee_and_account(self,entry):
         payee = entry.desc
         account = self.options.default_expense
-        tags = []
+        tags = ''
         found = False
         # Try to match entry desc with mappings patterns
         for m in self.mappings:
@@ -206,6 +211,9 @@ class OutputRenderer(metaclass=ABCMeta):
                 if m[0].match(entry.desc):
                     payee, account, tags = m[1], m[2], m[3]
                     found = True
+        #tags gets read in as a list, but just contains one string
+        if tags:
+            tags = tags[0]
 
         modified = False
         if self.options.quiet and found:
@@ -233,7 +241,6 @@ class OutputRenderer(metaclass=ABCMeta):
 
         if not found or (found and modified):
             # Add new or changed mapping to mappings and append to file
-            print(tags)
             self.mappings.append((entry.desc, payee, account, tags))
             self.append_mapping_file(entry.desc, payee, account, tags)
 
@@ -260,7 +267,7 @@ class LedgerRenderer(OutputRenderer):
 
     def tagify(self,value):
         if value.find(':') < 0 and value[0] != '[' and value[-1] != ']':
-            value = ":{0}:".format(value)
+            value = ":{0}:".format(value.replace(' ','-').replace(',',''))
             return value
 
     def get_possible_accounts_and_payees(self):
@@ -271,7 +278,7 @@ class LedgerRenderer(OutputRenderer):
 
     def prompt_for_tags(self,prompt, values, default):
         # tags = list(default[0].split(':'))
-        tags = [':{}:'.format(t) for t in default[0].split(':') if t] if default else []
+        tags = [':{}:'.format(t) for t in default.split(':') if t] if default else []
         value = self.prompt_for_value(prompt, values, "".join(tags).replace('::',':'))
         while value:
             if value[0] == '-':
@@ -318,7 +325,7 @@ class LedgerRenderer(OutputRenderer):
 
             All other lines are ignored.
         """
-        if not self.options.accounts_file: return 
+        if not self.options.accounts_file: return
         accounts = []
         pattern = re.compile("^\s*account\s+([:A-Za-z0-9-_ ]+)$")
         with open(self.options.accounts_file, "r", encoding='utf-8') as f:
@@ -335,8 +342,8 @@ class BeancountRenderer(OutputRenderer):
     import beancount
 
     def tagify(self,value):
-        value = "{}".format(value.replace(' ','-'))
-        return value
+        #no spaces or commas allowed
+        return value.replace(' ','-').replace(',','')
 
     def get_possible_accounts_and_payees(self):
         if self.journal_file:
@@ -374,10 +381,9 @@ class BeancountRenderer(OutputRenderer):
 
 
     def prompt_for_tags(self,prompt, values, default):
-        tags = " ".join(["#{}".format(t) for t in default[0].split() if t]) if default else []
+        tags = " ".join(["#{}".format(t) for t in default.split() if t]) if default else []
         value = self.prompt_for_value(prompt, values, " ".join(["#{}".format(t) for t in tags]))
         while value:
-            print(value)
             if value[0] == '-':
                 value = self.tagify(value[1:])
                 if value in tags:

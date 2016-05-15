@@ -54,19 +54,19 @@ FILE_DEFAULTS = dotdict({
     'template_file': os.path.join(DEFAULT_CONFIG_DIR, 'template')})
 
 DEFAULT_LEDGER_TEMPLATE = """\
-{transaction_date} {cleared_character} {payee}
+{transaction_date} {cleared_character} {payee} {tags}
     ; plaid_name: {name}
-    ; _id: {transaction_id}
-    {debit_account:<60}   {currency} {debit_amount}
-    {credit_account:<60}   {currency} {credit_amount}
+    ; _id: {_id}
+    {associated_account:<60}   {currency} {amount}
+    {posting_account:<60}
 """
 
 DEFAULT_BEANCOUNT_TEMPLATE = """\
 {transaction_date} {cleared_character} "{payee}" "" {tags}
     plaid_name: {name}
-    _id: {transaction_id}
-    {debit_account:<60}   {debit_amount} {currency}
-    {credit_account:<60}
+    _id: {_id}
+    {associated_account:<60}   {amount} {currency}
+    {posting_account:<60}
 """
 
 def touch(fname, mode=0o666, dir_fd=None, **kwargs):
