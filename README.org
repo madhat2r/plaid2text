@@ -1,6 +1,37 @@
 #+TITLE: Plaid2Text Documentation
 #+HTML_HEAD_EXTRA: <link rel="stylesheet" type="text/css" href="../../../css/readtheorg.css" />
 
+* Table of Contents     :TOC:
+ - [[#synopsis][Synopsis]]
+ - [[#contributions][Contributions]]
+ - [[#requirements][Requirements]]
+ - [[#plaid][Plaid]]
+ - [[#plaid2text][Plaid2Text]]
+   - [[#creating-a-plaid-account][Creating a Plaid Account]]
+ - [[#arguments-summary][Arguments Summary]]
+ - [[#options-summary][Options Summary]]
+   - [[#options][Options]]
+ - [[#example-uses][Example Uses]]
+ - [[#processing-a-transaction][Processing a Transaction]]
+ - [[#configuration-files][Configuration Files]]
+   - [[#main-configuration-file][Main Configuration File]]
+   - [[#template-file][Template File]]
+     - [[#brief-field-description-only-of-main-use-fields][Brief Field Description (only of main use fields)]]
+     - [[#defaults][Defaults]]
+       - [[#beancount][beancount]]
+       - [[#ledger][ledger]]
+   - [[#headers-file][Headers File]]
+   - [[#mappings-file][Mappings File]]
+     - [[#fields][Fields]]
+     - [[#important-point][Important Point]]
+     - [[#sample-mappings-file][Sample Mappings File]]
+ - [[#workflow][Workflow]]
+   - [[#download-new-transactions][Download New Transactions]]
+   - [[#export-new-transactions][Export New Transactions]]
+   - [[#copy-transactions][Copy Transactions]]
+ - [[#disclaimer][DISCLAIMER]]
+   - [[#license][License]]
+
 * Synopsis
 The purpose of this python script is to bring those of us who chose to use
 =command line accounting=, some of the benefits of more conventional accounting
@@ -42,6 +73,7 @@ sometime in the future I may test on OSX.
 
 *Note*: python dependencies must be installed prior to running the script. All
 can be installed from =pip= or of course whatever means you wish to use.
+
 
 * Plaid
 Plaid is an API used in building web-based financial applications. It provides
@@ -344,6 +376,60 @@ will output beancount syntax to stdout.
 
 ~./plaid2text chase_checking --all-transactions --from-date 2015/04/15 --no-mark-processed~
 
+* Processing a Transaction
+When you start processing transactions, you will be presented with
+several prompts related to the current transaction. These prompts will be to
+get the associated account, the payee, and optionally tags. If you have a
+mappings file, provided a journal file, or have already processed a few
+transactions, then ~TAB~ completion is available at all these prompts.
+
+During your first run, when your mappings file has not yet been established, you
+will have to manually (via prompts) establish the correct accounts and payees.
+But once you have done so, your mappings file will have the correct information
+for transactions in the future, and given that most of us are creatures of habit
+and make purchases from the same places, you will only occasionally have to
+account for new entries. 
+
+Now let's walk through a transaction for you can get an idea of what to expect.
+Keeping with out sample account =chase_checking=, we will pull the latest
+transactions, and also prompt for tags (=--tags=) and suppress prompting for
+known transactions via our mappings (=--quiet=), we will also be using
+=beancount= output syntax (=--output-format=).
+
+~./plaid2text chase_checking /tmp/onetime.bnc --quiet --tags --output-format beancount~
+
+When the above command is run, you will be presented with a prompt for the first
+non-matched transaction. The first prompt is for the payee. You will notice that
+the default answers are in =[]=, so if you just hit enter, that will be the
+value. When looking at the transaction prompt, you will see it starts with a
+date followed by the name that Plaid assigns this transaction, in this case
+Plaid got it correct, this will not always be the case. The next area shows the
+amount of the transaction.
+
+[[file:img/netflix_payee.png]]
+
+Following the payee prompt is the "Account" prompt. Enter the correct associated
+account, then hit enter.
+
+[[file:img/netflix_account.png]]
+
+Then we are prompted for tags (because we passed ~--tags~). Tags work a little
+differently, you will be prompted over and over for tags until you just hit
+enter without typing another value. If you make a mistake in entering your tag,
+you may prefix the tag with =-= (minus) to remove it. For instance say you
+accidentally typed =mvoie= and hit enter, when the prompt comes back you see
+your mistake in the default area and want to correct it. So now you type
+=-mvoie= and hit enter, and you will notice that the tag has been removed.
+
+[[file:img/netflix_tags.png]]
+
+When you hit enter the final time on tags, the program will move on to the next
+transaction needing your input.
+
+Again, all of these prompts use =TAB= completion, and the more information you
+give the program, via your config files, the better the completion becomes.
+
+
 * Configuration Files
 ** Main Configuration File
 This is an example config file that has an account setup that is nicknamed
@@ -493,7 +579,7 @@ information again if you use =--quiet=.
 2. the name you wish to use for the =payee=
 3. the associated expense or other account (i.e. ~Expenses:Unknown~)
 4. tags to be used for this transaction. This should be in the form of a string.
-   For ledger the format would be:=:tag1:tag2:etc:= and for beancount: =#tag1 #tag2 #etc=
+   For ledger the format would be: ~:tag1:tag2:etc:~ and for beancount: ~#tag1 #tag2 #etc~
 
 *** Important Point
 The matching algorithm will always use the latest match when processing entries.
