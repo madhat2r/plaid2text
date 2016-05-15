@@ -4,9 +4,9 @@ import os
 import re
 import subprocess
 import csv
-import config_manager as cm
+import plaid2text.config_manager as cm
 from abc import ABCMeta, abstractmethod
-from interact import separator_completer,prompt
+from plaid2text.interact import separator_completer,prompt
 
 class Entry:
     """

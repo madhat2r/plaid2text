@@ -4,9 +4,9 @@ import sys
 import os
 import configparser
 from collections import OrderedDict
-from interact import prompt
-from interact import NullValidator
-from interact import YesNoValidator
+from plaid2text.interact import prompt
+from plaid2text.interact import NullValidator
+from plaid2text.interact import YesNoValidator
 
 
 class dotdict(dict):
