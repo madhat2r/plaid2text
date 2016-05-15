@@ -357,7 +357,7 @@ The following will set up a new account with nickname =chase_checking=
 The following will download all new transactions for the account
 =chase_checking=. 
 
-    *NOTE*: when downloading for the first time, be sure to wait at least 30min
+    *NOTE*: when downloading for the first time, be sure to wait at least 15min
     after setting up the account. This gives Plaid time to pull your
     transactions from the institution.
 
