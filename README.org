@@ -449,6 +449,24 @@ In addition to the above fields =plaid2text= also provides the following:
   - ledger :: format ':tag1:tag2:etc:'
      
 
+*** Defaults
+**** beancount
+#+BEGIN_SRC
+{transaction_date} {cleared_character} "{payee}" "" {tags}
+    plaid_name: {name}
+    _id: {_id}
+    {associated_account:<60}   {amount} {currency}
+    {posting_account:<60}
+#+END_SRC
+**** ledger
+#+BEGIN_SRC
+{transaction_date} {cleared_character} {payee} {tags}
+    ; plaid_name: {name}
+    ; _id: {_id}
+    {associated_account:<60}   {currency} {amount}
+    {posting_account:<60}
+#+END_SRC
+
 ** Headers File
 
 The headers file is used to add some text to the top of the output file. This
