@@ -5,6 +5,7 @@
  - [[#synopsis][Synopsis]]
  - [[#contributions][Contributions]]
  - [[#requirements][Requirements]]
+ - [[#installation][Installation]]
  - [[#plaid][Plaid]]
  - [[#plaid2text][Plaid2Text]]
    - [[#creating-a-plaid-account][Creating a Plaid Account]]
@@ -74,6 +75,25 @@ sometime in the future I may test on OSX.
 *Note*: python dependencies must be installed prior to running the script. All
 can be installed from =pip= or of course whatever means you wish to use.
 
+* Installation
+This program is setup as a python package, and can be installed using your
+preferred tools, but this document will only cover using =pip=.
+
+First, clone the git repo:
+=git clone git@github.com:madhat2r/plaid2text.git=
+
+or if preferring HTTPS:
+=git clone https://github.com/madhat2r/plaid2text.git=
+
+Then change into folder:
+=cd plaid2text=
+
+Then use =pip= to install:
+=pip install .=
+
+If you plan on making modifications to the program, then you may want to install
+it as editable. (this is my preferred way)
+=pip install -e .=
 
 * Plaid
 Plaid is an API used in building web-based financial applications. It provides
@@ -87,7 +107,7 @@ The keys we are interested in are:
 
 Once you have obtained your keys then use =plaid2text= to create your
 configuration file and save your keys into it. You can do this by simply
-invoking plaid2text without arguments. =./plaid2text= will prompt you for your
+invoking plaid2text without arguments. =plaid2text= will prompt you for your
 keys and store them in your config file.
 
 A note about Plaid. Plaid is a paid service, but developers have access to the
@@ -116,12 +136,12 @@ accomplish.
 
 First issue the following command:
 
-=./plaid2text account_nickname --create-account=
+=plaid2text account_nickname --create-account=
 
 As an example let's say I am setting up an account for my personal checking, and the
 institution I use is Chase. I might use this command to create it.
 
-=./plaid2text chase_checking --create-account=
+=plaid2text chase_checking --create-account=
 
 This would allow me to setup and account with the nickname =chase_checking=. You
 will use the nickname for downloading and parsing transactions, so make
@@ -260,7 +280,7 @@ is the default account for which to post transactions to. Default
 ~--download-transactions, -d~
 fetches new transactions from Plaid into Mongo for given account.
 
-Use: =./plaid2text acct_nickname -d=
+Use: =plaid2text acct_nickname -d=
 
 ~--from-date STR~
 specify a the starting date for transactions to be pulled.
@@ -352,7 +372,7 @@ Date format: ~YYYY-MM-DD~ or ~YYYY/MM/DD~
   
 The following will set up a new account with nickname =chase_checking=
 
-~./plaid2text chase_checking --create-account~
+~plaid2text chase_checking --create-account~
 
 The following will download all new transactions for the account
 =chase_checking=. 
@@ -361,20 +381,20 @@ The following will download all new transactions for the account
     after setting up the account. This gives Plaid time to pull your
     transactions from the institution.
 
-~./plaid2text chase_checking --downlad-transactions~
+~plaid2text chase_checking --downlad-transactions~
 
 The following will pull all new  transactions for account
 =chase_checking= and output them to =/tmp/onetime.ldg= Ledger syntax
 after prompting you for the correct information for every transaction and
 marking all pulled transaction in the database as pulled.
 
-~./plaid2text chase_checking /tmp/onetime.ldg --output-format ledger~
+~plaid2text chase_checking /tmp/onetime.ldg --output-format ledger~
 
 The following will pull *all* transactions starting from the given date for the
 =chase_checking= account and will not mark them as pulled in the database, and
 will output beancount syntax to stdout.
 
-~./plaid2text chase_checking --all-transactions --from-date 2015/04/15 --no-mark-processed~
+~plaid2text chase_checking --all-transactions --from-date 2015/04/15 --no-mark-processed~
 
 * Processing a Transaction
 When you start processing transactions, you will be presented with
@@ -396,7 +416,7 @@ transactions, and also prompt for tags (=--tags=) and suppress prompting for
 known transactions via our mappings (=--quiet=), we will also be using
 =beancount= output syntax (=--output-format=).
 
-~./plaid2text chase_checking /tmp/onetime.bnc --quiet --tags --output-format beancount~
+~plaid2text chase_checking /tmp/onetime.bnc --quiet --tags --output-format beancount~
 
 When the above command is run, you will be presented with a prompt for the first
 non-matched transaction. The first prompt is for the payee. You will notice that
@@ -617,7 +637,7 @@ account =chase_checking= to keep things consistent.
 When I get ready to work on my books, I start by downloading the newest
 transactions for the account I am working on. 
 
-~./plaid2text chase_checking -d~
+~plaid2text chase_checking -d~
 
 This will download all the newest transactions from my accounts into the MongoDB.
 
@@ -628,7 +648,7 @@ This will download all the newest transactions from my accounts into the MongoDB
 I export new transaction (all the ones that haven't previously been pulled), into
 a temporary file, where I can do some manual checking and editing.
 
-~./plaid2text chase_checking /tmp/onetime.beancount --quiet~
+~plaid2text chase_checking /tmp/onetime.beancount --quiet~
 
 Using the =--quiet= switch, the program will only prompt me for information on
 the transactions that it cannot deduce based on the mappings file. You can of

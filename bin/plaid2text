@@ -1,0 +1,2 @@
+#!/usr/bin/env python3
+from plaid2text.plaid2text import main;main()

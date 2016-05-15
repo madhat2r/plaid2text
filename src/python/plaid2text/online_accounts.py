@@ -7,9 +7,9 @@ from plaid import errors as plaid_errors
 from pymongo import MongoClient
 from collections import OrderedDict
 import textwrap
-import storage_manager
-import config_manager as cm
-from interact import prompt,clear_screen,NullValidator,NumberValidator,NumLengthValidator,YesNoValidator, PATH_COMPLETER
+import plaid2text.storage_manager
+import plaid2text.config_manager as cm
+from plaid2text.interact import prompt,clear_screen,NullValidator,NumberValidator,NumLengthValidator,YesNoValidator, PATH_COMPLETER
 
 
 class PlaidAccess():

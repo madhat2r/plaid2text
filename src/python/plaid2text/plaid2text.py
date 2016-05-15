@@ -11,10 +11,10 @@
 import re
 import argparse
 import sys
-from renderers import LedgerRenderer,BeancountRenderer
-import config_manager as cm
-import storage_manager
-from online_accounts import PlaidAccess
+from plaid2text.renderers import LedgerRenderer,BeancountRenderer
+import plaid2text.config_manager as cm
+import plaid2text.storage_manager as storage_manager
+from plaid2text.online_accounts import PlaidAccess
 from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
