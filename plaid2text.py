@@ -240,7 +240,7 @@ def _parse_args_and_config_file():
         help=('clear screen for every transaction'
               ' (default: {0})'.format(cm.CONFIG_DEFAULTS.clear_screen)))
     parser.add_argument(
-        '--no-mark-processed',
+        '--no-mark-pulled',
         '-n',
         action='store_false',
         help=('Do not mark pulled transactions. '
@@ -345,7 +345,7 @@ def main():
         out = LedgerRenderer(trxs,options)
 
     update_dict = out.process_transactions()
-    if options.no_mark_processed:
+    if options.no_mark_pulled:
         for u in update_dict:
             sm.update_transaction(u)
 

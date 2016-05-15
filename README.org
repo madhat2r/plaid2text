@@ -18,14 +18,14 @@ syntax renderers. This is required to help keep track of which transaction we
 have already processed (as well as have records to reconstruct our files should
 the need arise).
 
-The main inspiration for the workings of the import part of the script came from
+The main inspiration for the workings of the export part of the script came from
 the excellent [[https://github.com/quentinsf/icsv2ledger][icsv2ledger]]. I borrowed heavily from Quentin's excellent script in
-making this tool, and in some places shamelessly stole his code altogether.
+making this tool, and in some places I have shamelessly stolen his code altogether.
 
 * Contributions
-Contributions are most welcome. I hope that this will pick up some traction in
-the community, and in the end we can all have a rock-solid program to help us
-with our accounting.
+Feedback and contributions are encouraged. I hope that this will pick up some
+traction in the community, and in the end we can all have a rock-solid program
+to help us with our accounting.
 
 * Requirements
 - Python           => 3.5
@@ -49,9 +49,9 @@ access to our transactions at a number of institutions. To get started with this
 program, you must sign up for a plaid account. Once you have done that Plaid
 will issue you some developer keys to use with their API. 
 
-The keys of interest are:
-- =client_id=: this is your developer ID
-- =secret=: this is your authentication token
+The keys we are interested in are:
+- client_id :: this is your developer ID
+- secret :: this is your authentication token
 
 Once you have obtained your keys then use =plaid2text= to create your
 configuration file and save your keys into it. You can do this by simply
@@ -66,7 +66,7 @@ would be (and told them my use case), and was informed that a paid version comes
 to 0.25 USD per account, per month. That is still a heck-of-a-better deal than
 Quickbooks online in my opinion. I can get my 6 accounts for 1.50 USD per month,
 but like I mentioned, I have yet run into any caps on my developer account, so
-that maybe all I ever use.
+that may be all I ever use.
 
 * Plaid2Text
 
@@ -84,18 +84,18 @@ accomplish.
 
 First issue the following command:
 
-=plaid2text account_nickname --create-account=
+=./plaid2text account_nickname --create-account=
 
 As an example let's say I am setting up an account for my personal checking, and the
 institution I use is Chase. I might use this command to create it.
 
-=plaid2text chase_checking --create-account=
+=./plaid2text chase_checking --create-account=
 
 This would allow me to setup and account with the nickname =chase_checking=. You
-will use the nickname for getting downloading and parsing transactions, so make
+will use the nickname for downloading and parsing transactions, so make
 it something meaningful for you.
 
-Once you have issued that command =plaid2text= will present you with a list of
+Once you have issued the above command =plaid2text= will present you with a list of
 institutions from which to choose.
 
 #+BEGIN_SRC
@@ -120,6 +120,14 @@ you will have setup your first account in Plaid. The program will then prompt
 you for some default config options. Config options are covered in the proceeding
 sections.
 
+Note: wait at least 15 minutes before the first download of your transactions,
+this give Plaid time to collect the information from your institution. Plaid
+says it will have them within 240 seconds, but I think it's better to give it
+time. 
+
+Also, different institutions keep your historical data for different
+lengths of time. You can check the availability here: [[https://github.com/plaid/support/blob/master/data-availability.md][Data Availability]]
+
 * Arguments Summary
 
 #+BEGIN_SRC
@@ -132,7 +140,7 @@ that you do not erase your current journal file, or any other file of importance
 
 * Options Summary
 A lot of these options also have an equivalent setting in the config file
-(=~/.config/plaid2text/config=). Where this happens the config file settings
+(=~/.config/plaid2text/config=). Where this happens, the config file settings
 will be underscored versions of the command line long options: =--mappings-file=
 would become =mappings_file=. 
 
@@ -227,12 +235,12 @@ specify a the starting date for transactions to be pulled.
 
 Use in conjunction with ~--to-date~ to specify range 
 
-Date format: YYYY-MM-DD or YYYY/MM/DD
+Date format: =YYYY-MM-DD= or =YYYY/MM/DD=
 
 ~--headers-file FILE~
 file which contains contents to be written to the top of the output file. For
 example, I store my beancount files as OrgMode files, so I have my headers file
-setup to insert instructions at the top for emacs, to help ease my editing of
+setup to insert instructions at the top for =Emacs=, to help ease my editing of
 them once they are exported to text. And also I include my main beancount file
 which has all my accounts listed, this also allows for easy running of
 =bean-check= to verify the newly exported file.
@@ -342,6 +350,7 @@ This is an example config file that has an account setup that is nicknamed
 =chase_checking=. You will notice some settings that are obfuscated with xxx,
 these are created when setting up accounts, and are not entered manually.
 
+#+BEGIN_SRC
     [DEFAULT]
     posting_account = Assets:Bank:Checking
     default_expense = Expenses:Unknown
@@ -369,15 +378,171 @@ these are created when setting up accounts, and are not entered manually.
     accounts_file = ~/somewhere/main.beancount
     journal_file = ~/somewhere/beancount/main.beancount
     template_file = ~/.config/plaid2text/chase_checking/template_bc
+#+END_SRC
  
 ** Template File
+The template file is what transforms your transactions into the desired text
+based accounting syntax. You have access to all the fields that plaid returns to
+use in your templates. But be aware that not all fields are returned with every
+transaction, and you might have to modify the source to handle this, should you
+choose to use them in your template. Below is a list of all fields available.
+The =A= column indicates if field is always available. 
+
+| Field                         | Types   | A |
+|-------------------------------+---------+---|
+| _account                      | String  | y |
+| _id                           | String  | y |
+| amount                        | Number  | y |
+| name                          | String  | y |
+| date                          | Date    | y |
+| meta                          | Object  | y |
+| meta.location                 | Object  | y |
+| pending                       | Boolean | y |
+| score                         | Object  | y |
+| score.location                | Object  | y |
+| score.name                    | Number  | y |
+| type                          | Object  | y |
+| type.primary                  | String  | y |
+| meta.location.state           | String  | n |
+| score.location.state          | Number  | n |
+| category                      | Array   | n |
+| category_id                   | String  | n |
+| meta.location.city            | String  | n |
+| score.location.city           | Number  | n |
+| meta.location.coordinates     | Object  | n |
+| meta.location.coordinates.lat | Number  | n |
+| meta.location.coordinates.lon | Number  | n |
+| score.location.address        | Number  | n |
+| score.location.zip            | Number  | n |
+| meta.location.address         | String  | n |
+| meta.location.zip             | String  | n |
+| meta.location.store_number    | String  | n |
+| meta.payment_processor        | String  | n |
+| meta.ppd_id                   | String  | n |
+| _pendingTransaction           | String  | n |
+| meta.reference_number         | String  | n |
+| meta.payee                    | String  | n |
+| meta.payment_method           | String  | n |
+|-------------------------------+---------+---|
+
+In addition to the above fields =plaid2text= also provides the following:
+
+| Field               | type   |
+|---------------------+--------|
+| posting_account     | String |
+| associated_accounts | String |
+| payee               | String |
+| tags                | String |
+|---------------------+--------|
+
+*** Brief Field Description (only of main use fields)
+- _account :: the Plaid account ID
+- _id :: the Plaid transaction ID, Also the MongoDB ~_id~
+-  name :: the Plaid name for the transaction. (i.e. Best Buy)
+- amount :: the amount of debit/credit. This is a *signed* number.
+- date :: the date the transaction occurred
+- posting_account :: the account transaction are posted to
+- associated_account :: the expense or other account attributed to the transaction
+- payee :: the payee for the transaction
+- tags :: the given tags for the transaction in a string
+  - beancount :: format '#tag1 #tag2 #etc'
+  - ledger :: format ':tag1:tag2:etc:'
+     
 
 ** Headers File
 
+The headers file is used to add some text to the top of the output file. This
+can be anything you like. I use mine for adding some header info for =Emacs= to
+read for it sets the correct mode for me when I edit the file.
+
+I also use the ~include~ directive to pull in my main file, to aide in running =bean-check=.
+
 ** Mappings File
+The mappings file is simply a =CSV= formatted file, that contains four fields. When
+exporting transactions, this file will try to establish the proper accounts and
+payees for each transaction based on the fields in the file. It also handles
+adding some default tags.
+
+This file is created for you, if you do not have one defined in the settings.
+Also, it is appended to every time you are exporting transactions with the new
+matches, that way next time you export you will not have to enter the
+information again if you use =--quiet=.
+
+*** Fields
+1. text to match against the Plaid =name= field. This can be either plain text
+   or a regex. If the field starts and ends with =/= it is assumed to be a
+   regex. Note: all the regexes will be matched /case insensitive/.
+2. the name you wish to use for the =payee=
+3. the associated expense or other account (i.e. ~Expenses:Unknown~)
+4. tags to be used for this transaction. This should be in the form of a string.
+   For ledger the format would be:=:tag1:tag2:etc:= and for beancount: =#tag1 #tag2 #etc=
+
+*** Important Point
+The matching algorithm will always use the latest match when processing entries.
+So if for example you have a regex setup that matches //best buy// at the top of
+the mappings file and another that has //buy// later in the file, the last match
+wins.
+
+*** Sample Mappings File
+Some of the listings will contain ledger formatted tags while other will be
+beancount, you of course will only have the type that you need, do not mix them.
+
+#+BEGIN_SRC
+/Amazon/,"Amazon",Expenses:Unknown:Amazon, #sort-out
+/PAYPAL INST XFER/,"PayPal",Expenses:Unknown:PayPal, :sort-out:
+/.*NETFLIX.*/,"Netflix",Expenses:Bills:Subscriptions:Netflix
+/.*DROPBOX.*/,"Dropbox",Expenses:Bills:Subscriptions:Dropbox
+/Amazon Video/,"Amazon Video",Expenses:Entertainment:Movies
+The Doughnut Palace,"The Doughnut Palace",Expenses:Food:FastFood
+54th Street,"54th Street",Expenses:Food:Restaurant
+BJ'S RESTAURANTS,"BJ's Restaurant",Expenses:Food:Restaurant
+#+END_SRC
+
+Also notice the sorting of the entries so that =Amazon Video= gets categorized
+properly. If it were above the =Amazon= entry, it would use the setting from
+there instead, as the last entry always wins.
+
+
+* Workflow
+In this section I will just describe my basic workflow to demonstrate how I use
+this tool. Going forwards assumes you have already established your plaid setup
+as well as at least one account. I will continue to demonstrate with the example
+account =chase_checking= to keep things consistent.
+
+** Download New Transactions
+When I get ready to work on my books, I start by downloading the newest
+transactions for the account I am working on. 
+
+~./plaid2text chase_checking -d~
+
+This will download all the newest transactions from my accounts into the MongoDB.
+
+      You can of course setup a cron job to do this nightly, but I find it fits
+      into my workflow just doing it manually.
+
+** Export New Transactions
+I export new transaction (all the ones that haven't previously been pulled), into
+a temporary file, where I can do some manual checking and editing.
+
+~./plaid2text chase_checking /tmp/onetime.beancount --quiet~
+
+Using the =--quiet= switch, the program will only prompt me for information on
+the transactions that it cannot deduce based on the mappings file. You can of
+course leave that switch off if you want to be able to change the defaults from
+the mapping file.
+
+Also, if you want to do a test run, without marking the transactions as pulled
+use the =--no-mark-pulled= switch.
+
+*IMPORTANT* I want to stress that the outfile is *OVERWRITTEN* or created
+every time this command is run. So be careful. :)
+
+** Copy Transactions
+When I am satisfied that all is well with my temp file. I copy the new entries
+into my actual journal file.
 
 * DISCLAIMER
-This should be considered /*alpha*/ stage code. I have released it hoping that it
+This should be considered /*beta*/ version code. I have released it hoping that it
 will be of benefit to others in a similar situation as me. This version of the
 code is really hacked together and in need of serious refactoring, and will most
 likely contain bugs. I have had this working for myself for a few weeks, and
