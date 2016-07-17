@@ -196,6 +196,11 @@ def _parse_args_and_config_file():
         help=('The name of the Mongo database'
               ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db)))
     parser.add_argument(
+        '--mongo-db-uri',
+        metavar='STR',
+        help=('The URI for your MongoDB in the MongoDB URI format'
+              ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db_uri)))
+    parser.add_argument(
         '--default-expense',
         metavar='STR',
         help=('expense account used as default destination'
@@ -314,7 +319,7 @@ def main():
     if not isinstance(options.clear_screen,bool):
         options.clear_screen = options.clear_screen.lower() in truthy
 
-    sm = storage_manager.StorageManager(options.mongo_db, options.plaid_account,options.posting_account)
+    sm = storage_manager.StorageManager(options.mongo_db,options.mongo_db_uri, options.plaid_account,options.posting_account)
 
     if options.download_transactions:
         trans = PlaidAccess().get_transactions(options.access_token, options.account)

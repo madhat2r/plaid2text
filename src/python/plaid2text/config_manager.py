@@ -38,7 +38,8 @@ CONFIG_DEFAULTS = dotdict({
     'output_date_format': '%Y/%m/%d',
     'quiet': False,
     'tags': False,
-    'mongo_db': 'plaid2text'
+    'mongo_db': 'plaid2text',
+    'mongo_db_uri': 'mongodb://localhost:27017'
     })
 
 DEFAULT_CONFIG_DIR = os.path.expanduser("~/.config/plaid2text")
