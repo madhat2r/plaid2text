@@ -17,8 +17,8 @@ class StorageManager():
     """
     Handles all Mongo related tasks
     """
-    def __init__(self,db,account,posting_account):
-        self.mc = MongoClient()
+    def __init__(self,db,uri,account,posting_account):
+        self.mc = MongoClient(uri)
         self.db_name = db
         self.db = self.mc[db]
         self.account = self.db[account]

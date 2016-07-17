@@ -227,6 +227,8 @@ command line options take precedence over config file settings.
                         (default journal file: ~/.config/plaid2text/journal)
   --mapping-file FILE   file which holds the mappings (default: ~/.config/plaid2text/mapping)
   --mongo-db STR        The name of the Mongo database (default: plaid2text)
+  --mongo-db-uri STR    The URI for your MongoDB in the MongoDB URI format
+                          (default: mongodb://localhost:27017)
   --no-mark-processed, -n
                         Do not mark pulled transactions. When given, the
                         pulled transactions will still be listed as new
@@ -324,6 +326,11 @@ default: =~/.config/plaid2text/mapping=
 name of the Mongo database that stores downloaded transactions.
 
 Default: ~plaid2text~
+
+~--mongo-db-uri STR~
+The URI for your MongoDB in the MongoDB URI format
+
+Default: ~mongodb://localhost:27017~
 
 ~--no-mark-processed, -n~
 will not mark pulled transactions as pulled. When passed, the pulled transactions will still be listed as new
@@ -463,6 +470,7 @@ these are created when setting up accounts, and are not entered manually.
     encoding = utf-8
     currency = USD
     mongo_db = plaid2text
+    mongo_db_uri: mongodb://localhost:27017
     quiet = False
     tags = False
     output_date_format = %%Y/%%m/%%d

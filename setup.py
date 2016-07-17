@@ -44,7 +44,7 @@ plaid2text
 # Create a setup.
 setup(
     name="plaid2text",
-    version='0.1.1',
+    version='0.1.2',
     description="Plaid API to ledger/beancount download/conversion",
 
     long_description=
