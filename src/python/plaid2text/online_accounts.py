@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import sys
+import os
 import datetime
 from plaid import Client
 from plaid import errors as plaid_errors
@@ -33,6 +34,7 @@ class PlaidAccess():
         self.client.access_token = access_token
         options = {}
         options["account"] = account_id
+        # options["pending"] = True
         #get all transaction up to and including today
         options['lte'] = datetime.date.today().strftime('%Y-%m-%d')
         self.connect_response = self.client.connect_get(options).json()
@@ -127,22 +129,41 @@ class PlaidAccess():
     def _present_file_options(self,nickname,file_type,default_file):
         a = prompt("Create a separate {} file configuration setting for this account [Y/n]: ".format(file_type)
                    ,validator=YesNoValidator()).lower()
-        if not bool(a) or create.startswith("y"):
+        if not bool(a) or a.startswith("y"):
             cont = True
             while cont:
                 path = prompt("Enter the path for the {} file used for this account [{}]: ".format(file_type,default_file),
                             completer=PATH_COMPLETER)
                 if path:
-                    cont = not os.path.isfile(os.path.expanduser(path))
+                    path = os.path.expanduser(path)
+                    file_exists = os.path.isfile(path)
+                    if not file_exists:
+                        create = prompt("{} does not exist. Do you want to create it? [Y/n]: ".format(path),validator=YesNoValidator()).lower()
+                        if not bool(create) or create.startswith("y"):
+                            if not os.path.exists(path): cm._create_directory_tree(path)
+                            cm._create_directory_tree(path)
+                            cm.touch(path)
+                            cont = False
+                        else: cont = True
+                    else:
+                        cont = False
+                else: #use default
+                    create = prompt("{} does not exist. Do you want to create it? [Y/n]: ".format(default_file),validator=YesNoValidator()).lower()
+                    if not bool(create) or create.startswith("y"):
+                        if not os.path.exists(default_file): cm._create_directory_tree(default_file)
+                        cm.touch(default_file)
+                        path = default_file
+                        cont = False
+                    else: cont = True
                 if cont:
                     print("Invalid path {}. Please enter a valid path.".format(path))
                 else:
-                    cont = false
+                    cont = False
 
             if not path:
                 path = cm.get_custom_file_path(nickname,file_type,create_file=True)
-            return f
-        elif create.startswith("n"):
+            return path
+        elif a.startswith("n"):
             return None
 
 

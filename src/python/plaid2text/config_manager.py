@@ -4,9 +4,7 @@ import sys
 import os
 import configparser
 from collections import OrderedDict
-from plaid2text.interact import prompt
-from plaid2text.interact import NullValidator
-from plaid2text.interact import YesNoValidator
+from plaid2text.interact import prompt, NullValidator, YesNoValidator
 
 
 class dotdict(dict):
@@ -102,7 +100,7 @@ def config_exists():
         return True
 
 def _get_config_parser():
-    config = configparser.ConfigParser(CONFIG_DEFAULTS)
+    config = configparser.ConfigParser(CONFIG_DEFAULTS,interpolation=None)
     config.read(FILE_DEFAULTS.config_file)
     return config
 
@@ -131,7 +129,6 @@ def get_configured_accounts():
     return accts
 
 
-
 def account_exists(account):
     config = _get_config_parser()
     if not config.has_section(account): return False
@@ -156,7 +153,7 @@ def write_section(section_dict):
 def init_config():
     try:
         _create_directory_tree(FILE_DEFAULTS.config_file)
-        config = configparser.ConfigParser()
+        config = configparser.ConfigParser(interpolation=None)
         config['PLAID'] = OrderedDict()
         plaid = config['PLAID']
         client_id = prompt("Enter your Plaid client_id: ",validator=NullValidator())
