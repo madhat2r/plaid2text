@@ -34,7 +34,8 @@ class Entry:
 
         # Get the date and convert it into a ledger/beancount formatted date.
         d8 = self.transaction['date']
-        self.transaction['transaction_date'] = d8.date().strftime('%Y/%m/%d')
+        d8_format = options.output_date_format
+        self.transaction['transaction_date'] = d8.date().strftime(d8_format)
 
         self.desc = self.transaction['name']
 
@@ -72,9 +73,9 @@ class Entry:
         template = (self.transaction['transaction_template'] if self.transaction['transaction_template']else
                     def_template)
         if self.options.output_format == 'beancount':
-            ret_tags = tags if tags else ''
+            ret_tags = ' {}'.format(tags) if tags else ''
         else:
-            ret_tags = '; {}'.format(tags) if tags else ''
+            ret_tags = ' ; {}'.format(tags) if tags else ''
 
         format_data = {
             'associated_account': account,
