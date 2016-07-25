@@ -559,22 +559,40 @@ In addition to the above fields =plaid2text= also provides the following:
 - associated_account :: the expense or other account attributed to the transaction
 - payee :: the payee for the transaction
 - tags :: the given tags for the transaction in a string
-  - beancount :: format '#tag1 #tag2 #etc'
-  - ledger :: format ':tag1:tag2:etc:'
-     
+  - beancount :: format: '#tag1 #tag2 #etc'
+  - ledger :: format: ':tag1:tag2:etc:'
+
+*NOTE:* The ~tags~ field is prefixed with a space, when tags are present, this
+ allows us to loose the trailing space that would otherwise exist in situations
+ where there were no tags, and the configured template supports them.
+
+Example of trailing space template:
+#+BEGIN_SRC
+{transaction_date} {cleared_character} "{payee}" "" {tags}
+#+END_SRC
+Using the above template would result in a trailing space when no tags are present.
+
+Example proper template:
+#+BEGIN_SRC
+{transaction_date} {cleared_character} "{payee}" ""{tags}
+#+END_SRC
+This template will add prefix the ~tags~ with a space only if they are present,
+otherwise it returns an empty string. This line will not have a trailing space.
 
 *** Defaults
 **** beancount
 #+BEGIN_SRC
-{transaction_date} {cleared_character} "{payee}" "" {tags}
-    plaid_name: {name}
-    _id: {_id}
+{transaction_date} {cleared_character} "{payee}" ""{tags}
+    plaid_name: "{name}"
+    plaid_id: "{_id}"
     {associated_account:<60}   {amount} {currency}
-    {posting_account:<60}
+    {posting_account}
 #+END_SRC
+
 **** ledger
+
 #+BEGIN_SRC
-{transaction_date} {cleared_character} {payee} {tags}
+{transaction_date} {cleared_character} {payee}{tags}
     ; plaid_name: {name}
     ; _id: {_id}
     {associated_account:<60}   {currency} {amount}
