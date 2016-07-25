@@ -61,11 +61,11 @@ DEFAULT_LEDGER_TEMPLATE = """\
 """
 
 DEFAULT_BEANCOUNT_TEMPLATE = """\
-{transaction_date} {cleared_character} "{payee}" "" {tags}
-    plaid_name: {name}
-    _id: {_id}
+{transaction_date} {cleared_character} "{payee}" ""{tags}
+    plaid_name: "{name}"
+    plaid_id: "{_id}"
     {associated_account:<60}   {amount} {currency}
-    {posting_account:<60}
+    {posting_account}
 """
 
 def touch(fname, mode=0o666, dir_fd=None, **kwargs):
