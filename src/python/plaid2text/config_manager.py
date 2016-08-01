@@ -117,6 +117,9 @@ def get_config(account):
     defaults['plaid_account'] = account
     defaults['config_file'] = FILE_DEFAULTS.config_file
     defaults['addons'] = OrderedDict()
+    for f in ['template_file','mapping_file','headers_file','journal_file','accounts_file']:
+        if f in defaults:
+            defaults[f] = os.path.expanduser(defaults[f])
     if config.has_section(account + '_addons'):
         for item in config.items(account + '_addons'):
             if item not in config.defaults().items():
