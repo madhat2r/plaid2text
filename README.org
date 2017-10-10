@@ -60,13 +60,13 @@ traction in the community, and in the end we can all have a rock-solid program
 to help us with our accounting.
 
 * Requirements
-- Python           => 3.5
-  * PyMango        => 0.1.1
-  * prompt_toolkit => 0.57
-  * plaid-python   => 1.3.0
-- ledger-cli       => 3        (if using ledger syntax)
-- Beancount        => 2.0      (if using beancount syntax)
-- MongoDB          => 3.2.3
+- Python                => 3.5
+  * PyMango             => 0.1.1
+  * prompt_toolkit      => 0.57
+  * plaid-python-legacy => 1.3.0
+- ledger-cli            => 3        (if using ledger syntax)
+- Beancount             => 2.0      (if using beancount syntax)
+- MongoDB               => 3.2.3
 
 I have only tested this on Linux. I have no desire to run this on Windows, but
 feel free to give it a shot, it may work. The same goes for Mac, although
