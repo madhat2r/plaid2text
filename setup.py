@@ -26,7 +26,7 @@ try:
         # used in console prompts/autocompletion
         'prompt_toolkit',
         # the heart of the program
-        'plaid-python'
+        'plaid-python-legacy'
     ])
 
 except ImportError:
