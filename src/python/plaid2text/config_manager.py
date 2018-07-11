@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 
-import sys
-import os
-import configparser
 from collections import OrderedDict
+import configparser
+import os
+import sys
+
 from plaid2text.interact import prompt, NullValidator, YesNoValidator
 
 
@@ -16,6 +17,7 @@ class dotdict(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+
 def get_locale_currency_symbol():
     """
     Get currency symbol from locale
@@ -24,6 +26,7 @@ def get_locale_currency_symbol():
     locale.setlocale(locale.LC_ALL, '')
     conv = locale.localeconv()
     return conv['int_curr_symbol']
+
 
 CONFIG_DEFAULTS = dotdict({
     # For configparser, int must be converted to str
@@ -40,9 +43,9 @@ CONFIG_DEFAULTS = dotdict({
     'tags': False,
     'mongo_db': 'plaid2text',
     'mongo_db_uri': 'mongodb://localhost:27017'
-    })
+})
 
-DEFAULT_CONFIG_DIR = os.path.expanduser("~/.config/plaid2text")
+DEFAULT_CONFIG_DIR = os.path.expanduser('~/.config/plaid2text')
 
 FILE_DEFAULTS = dotdict({
     'config_file': os.path.join(DEFAULT_CONFIG_DIR, 'config'),
@@ -68,6 +71,7 @@ DEFAULT_BEANCOUNT_TEMPLATE = """\
     {posting_account}
 """
 
+
 def touch(fname, mode=0o666, dir_fd=None, **kwargs):
     """
     Implementation of coreutils touch
@@ -76,32 +80,38 @@ def touch(fname, mode=0o666, dir_fd=None, **kwargs):
     flags = os.O_CREAT | os.O_APPEND
     with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
         os.utime(f.fileno() if os.utime in os.supports_fd else fname,
-            dir_fd=None if os.supports_fd else dir_fd, **kwargs)
+                 dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
-def get_custom_file_path(nickname,file_type,create_file=False):
-    f = os.path.join(DEFAULT_CONFIG_DIR,nickname,file_type)
+
+def get_custom_file_path(nickname, file_type, create_file=False):
+    f = os.path.join(DEFAULT_CONFIG_DIR, nickname, file_type)
     if create_file:
-        if not os.path.exists(f): _create_directory_tree(f)
+        if not os.path.exists(f):
+            _create_directory_tree(f)
         touch(f)
-        if file_type == "template":
-            with open(f,mode='w') as temp:
+        if file_type == 'template':
+            with open(f, mode='w') as temp:
                 temp.write(DEFAULT_BEANCOUNT_TEMPLATE)
     return f
 
 
 def config_exists():
     if not os.path.isfile(FILE_DEFAULTS.config_file):
-        print("No configuration file found.")
-        create = prompt("Do you want to create one now [Y/n]: ",validator=YesNoValidator()).lower()
-        if not bool(create) or create.startswith("y"):
+        print('No configuration file found.')
+        create = prompt(
+            'Do you want to create one now [Y/n]: ',
+            validator=YesNoValidator()
+        ).lower()
+        if not bool(create) or create.startswith('y'):
             return init_config()
-        elif create.startswith("n"):
-            raise Exception("No configuration file found")
+        elif create.startswith('n'):
+            raise Exception('No configuration file found')
     else:
         return True
 
+
 def _get_config_parser():
-    config = configparser.ConfigParser(CONFIG_DEFAULTS,interpolation=None)
+    config = configparser.ConfigParser(CONFIG_DEFAULTS, interpolation=None)
     config.read(FILE_DEFAULTS.config_file)
     return config
 
@@ -109,15 +119,20 @@ def _get_config_parser():
 def get_config(account):
     config = _get_config_parser()
     if not config.has_section(account):
-        print('Config file {0} does not contain section for account: {1}\n\nTo create this account: run plaid2text {1} --create-account'
-                .format(FILE_DEFAULTS.config_file, account),
-                file=sys.stderr)
+        print(
+            'Config file {0} does not contain section for account: {1}\n\n'
+            'To create this account: run plaid2text {1} --create-account'.format(
+                FILE_DEFAULTS.config_file,
+                account
+            ),
+            file=sys.stderr
+        )
         sys.exit(1)
     defaults = OrderedDict(config.items(account))
     defaults['plaid_account'] = account
     defaults['config_file'] = FILE_DEFAULTS.config_file
     defaults['addons'] = OrderedDict()
-    for f in ['template_file','mapping_file','headers_file','journal_file','accounts_file']:
+    for f in ['template_file', 'mapping_file', 'headers_file', 'journal_file', 'accounts_file']:
         if f in defaults:
             defaults[f] = os.path.expanduser(defaults[f])
     if config.has_section(account + '_addons'):
@@ -126,22 +141,26 @@ def get_config(account):
                 defaults['addons']['addon_' + item[0]] = int(item[1])
     return defaults
 
+
 def get_configured_accounts():
     config = _get_config_parser()
     accts = config.sections()
-    accts.remove('PLAID') #remove Plaid specific
+    accts.remove('PLAID')  # Remove Plaid specific
     return accts
 
 
 def account_exists(account):
     config = _get_config_parser()
-    if not config.has_section(account): return False
+    if not config.has_section(account):
+        return False
     return True
+
 
 def get_plaid_config():
     config = _get_config_parser()
     plaid_section = config['PLAID']
-    return plaid_section['client_id'],plaid_section['secret']
+    return plaid_section['client_id'], plaid_section['secret']
+
 
 def write_section(section_dict):
     config = _get_config_parser()
@@ -150,7 +169,7 @@ def write_section(section_dict):
     except Exception as e:
         raise
     else:
-        with open(FILE_DEFAULTS.config_file,mode='w') as f:
+        with open(FILE_DEFAULTS.config_file, mode='w') as f:
             config.write(f)
 
 
@@ -160,24 +179,23 @@ def init_config():
         config = configparser.ConfigParser(interpolation=None)
         config['PLAID'] = OrderedDict()
         plaid = config['PLAID']
-        client_id = prompt("Enter your Plaid client_id: ",validator=NullValidator())
+        client_id = prompt('Enter your Plaid client_id: ', validator=NullValidator())
         plaid['client_id'] = client_id
-        secret = prompt("Enter your Plaid secret: ",validator=NullValidator())
+        secret = prompt('Enter your Plaid secret: ', validator=NullValidator())
         plaid['secret'] = secret
     except Exception as e:
         return False
     else:
-        with open(FILE_DEFAULTS.config_file,mode='w') as f:
+        with open(FILE_DEFAULTS.config_file, mode='w') as f:
             config.write(f)
     return True
-
 
 
 def _create_directory_tree(filename):
     """
     This will create the entire directory path for the config file
     """
-    os.makedirs(os.path.dirname(filename),exist_ok=True)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
 
 
 def find_first_file(arg_file, alternatives):
@@ -192,5 +210,6 @@ def find_first_file(arg_file, alternatives):
             break
     return found
 
+
 if __name__ == '__main__':
-   get_locale_currency_symbol()
+    get_locale_currency_symbol()
