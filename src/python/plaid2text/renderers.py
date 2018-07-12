@@ -1,12 +1,15 @@
 #! /usr/bin/env python3
 
+from abc import ABCMeta, abstractmethod
+import csv
 import os
 import re
 import subprocess
-import csv
+import sys
+
 import plaid2text.config_manager as cm
-from abc import ABCMeta, abstractmethod
-from plaid2text.interact import separator_completer,prompt
+from plaid2text.interact import separator_completer, prompt
+
 
 class Entry:
     """
@@ -22,15 +25,16 @@ class Entry:
         self.options = options
 
         self.transaction = transaction
-        #TODO: document this
+        # TODO: document this
         if 'addons' in options:
-            self.transaction['addons'] = dict((k, fields[v - 1])
-                               for k, v in options.addons.items())
+            self.transaction['addons'] = dict(
+                (k, fields[v - 1]) for k, v in options.addons.items()  # NOQA
+            )
         else:
             self.transaction['addons'] = {}
 
-        #the id for the transaction
-        self.transaction['transaction_id']= self.transaction['_id']
+        # The id for the transaction
+        self.transaction['transaction_id'] = self.transaction['_id']
 
         # Get the date and convert it into a ledger/beancount formatted date.
         d8 = self.transaction['date']
@@ -39,14 +43,12 @@ class Entry:
 
         self.desc = self.transaction['name']
 
-        amnt = self.transaction['amount']
-        self.transaction['currency'] = currency = options.currency
+        # amnt = self.transaction['amount']
+        self.transaction['currency'] = options.currency
         # self.transaction['debit_amount'] = amnt
         # self.transaction['debit_currency'] = currency
         # self.transaction['credit_amount'] = ''
         # self.transaction['credit_currency'] = ''
-
-
 
         self.transaction['posting_account'] = options.posting_account
         self.transaction['cleared_character'] = options.cleared_character
@@ -62,16 +64,25 @@ class Entry:
         We print a summary of the record on the screen, and allow you to
         choose the destination account.
         """
-        return '{0} {1:<40} {2}'.format(self.transaction['date'], self.desc, self.transaction['amount'])
+        return '{0} {1:<40} {2}'.format(
+            self.transaction['date'],
+            self.desc,
+            self.transaction['amount']
+        )
 
     def journal_entry(self, payee, account, tags):
         """
         Return a formatted journal entry recording this Entry against
         the specified posting account
         """
-        def_template = cm.DEFAULT_LEDGER_TEMPLATE if self.options.output_format == 'ledger' else cm.DEFAULT_BEANCOUNT_TEMPLATE
-        template = (self.transaction['transaction_template'] if self.transaction['transaction_template']else
-                    def_template)
+        if self.options.output_format == 'ledger':
+            def_template = cm.DEFAULT_LEDGER_TEMPLATE
+        else:
+            def_template = cm.DEFAULT_BEANCOUNT_TEMPLATE
+        if self.transaction['transaction_template']:
+            template = (self.transaction['transaction_template'])
+        else:
+            template = (def_template)
         if self.options.output_format == 'beancount':
             ret_tags = ' {}'.format(tags) if tags else ''
         else:
@@ -91,8 +102,7 @@ class OutputRenderer(metaclass=ABCMeta):
     """
     Base class for output rendering.
     """
-
-    def __init__(self,transactions,options):
+    def __init__(self, transactions, options):
         self.transactions = transactions
         self.possible_accounts = set([])
         self.possible_payees = set([])
@@ -104,15 +114,15 @@ class OutputRenderer(metaclass=ABCMeta):
         self.journal_lines = []
         self.options = options
         self.get_possible_accounts_and_payees()
-        #add payees/accounts/tags from mappings
+        # Add payees/accounts/tags from mappings
         for m in self.mappings:
             self.possible_payees.add(m[1])
             self.possible_accounts.add(m[2])
             if m[3]:
-                if options.output_format =='ledger':
+                if options.output_format == 'ledger':
                     self.possible_tags.update(set(m[3][0].split(':')))
                 else:
-                    self.possible_tags.update([t.replace('#','') for t in m[3][0].split(' ')])
+                    self.possible_tags.update([t.replace('#', '') for t in m[3][0].split(' ')])
 
     def read_mapping_file(self):
         """
@@ -124,9 +134,10 @@ class OutputRenderer(metaclass=ABCMeta):
         If the match string begins and ends with '/' it is taken to be a
         regular expression.
         """
-        if not self.map_file: return
+        if not self.map_file:
+            return
 
-        with open(self.map_file, "r", encoding='utf-8', newline='') as f:
+        with open(self.map_file, 'r', encoding='utf-8', newline='') as f:
             map_reader = csv.reader(f)
             for row in map_reader:
                 if len(row) > 1:
@@ -136,22 +147,21 @@ class OutputRenderer(metaclass=ABCMeta):
                     tags = row[3:]
                     if pattern.startswith('/') and pattern.endswith('/'):
                         try:
-                            pattern = re.compile(pattern[1:-1],re.I)
+                            pattern = re.compile(pattern[1:-1], re.I)
                         except re.error as e:
-                            print("Invalid regex '{0}' in '{1}': {2}"
+                            print(
+                                "Invalid regex '{0}' in '{1}': {2}"
                                 .format(pattern, self.map_file, e),
                                 file=sys.stderr)
                             sys.exit(1)
                     self.mappings.append((pattern, payee, account, tags))
 
-
     def append_mapping_file(self, desc, payee, account, tags):
         if self.map_file:
             with open(self.map_file, 'a', encoding='utf-8', newline='') as f:
                 writer = csv.writer(f)
-                ret_tags = tags if len(tags ) > 0 else ''
-                writer.writerow([desc, payee, account,ret_tags])
-
+                ret_tags = tags if len(tags) > 0 else ''
+                writer.writerow([desc, payee, account, ret_tags])
 
     def process_transactions(self):
         """
@@ -165,8 +175,8 @@ class OutputRenderer(metaclass=ABCMeta):
         """
         out = self._process_plaid_transactions()
         if self.options.headers_file:
-            headers = "".join(open(self.options.headers_file,mode='r').readlines())
-            print(headers,file=self.options.outfile)
+            headers = ''.join(open(self.options.headers_file, mode='r').readlines())
+            print(headers, file=self.options.outfile)
         print(*self.journal_lines, sep='\n', file=self.options.outfile)
         return out
 
@@ -185,17 +195,19 @@ class OutputRenderer(metaclass=ABCMeta):
             dic['payee'] = payee
             dic['posting_account'] = self.options.posting_account
             out.append(dic)
-            self.journal_lines.append(entry.journal_entry( payee, account, tags))
+            self.journal_lines.append(entry.journal_entry(payee, account, tags))
         return out
 
-
-    def prompt_for_value(self,text_prompt, values, default):
+    def prompt_for_value(self, text_prompt, values, default):
         sep = ':' if text_prompt == 'Payee' else ' '
-        a = prompt("{} [{}]: ".format(text_prompt,default),completer=separator_completer(values,sep=sep))
-        #handle tag returning none if accepting
+        a = prompt(
+            '{} [{}]: '.format(text_prompt, default),
+            completer=separator_completer(values, sep=sep)
+        )
+        # Handle tag returning none if accepting
         return a if (a or text_prompt == 'Tag') else default
 
-    def get_payee_and_account(self,entry):
+    def get_payee_and_account(self, entry):
         payee = entry.desc
         account = self.options.default_expense
         tags = ''
@@ -212,7 +224,7 @@ class OutputRenderer(metaclass=ABCMeta):
                 if m[0].match(entry.desc):
                     payee, account, tags = m[1], m[2], m[3]
                     found = True
-        #tags gets read in as a list, but just contains one string
+        # Tags gets read in as a list, but just contains one string
         if tags:
             tags = tags[0]
 
@@ -252,7 +264,7 @@ class OutputRenderer(metaclass=ABCMeta):
         return (payee, account, tags)
 
     @abstractmethod
-    def tagify(self,value):
+    def tagify(self, value):
         pass
 
     @abstractmethod
@@ -260,15 +272,14 @@ class OutputRenderer(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def prompt_for_tags(self,prompt, values, default):
+    def prompt_for_tags(self, prompt, values, default):
         pass
 
 
 class LedgerRenderer(OutputRenderer):
-
-    def tagify(self,value):
+    def tagify(self, value):
         if value.find(':') < 0 and value[0] != '[' and value[-1] != ']':
-            value = ":{0}:".format(value.replace(' ','-').replace(',',''))
+            value = ':{0}:'.format(value.replace(' ', '-').replace(',', ''))
             return value
 
     def get_possible_accounts_and_payees(self):
@@ -277,10 +288,10 @@ class LedgerRenderer(OutputRenderer):
             self.possible_accounts = self._accounts_from_ledger()
         self.read_accounts_file()
 
-    def prompt_for_tags(self,prompt, values, default):
+    def prompt_for_tags(self, prompt, values, default):
         # tags = list(default[0].split(':'))
         tags = [':{}:'.format(t) for t in default.split(':') if t] if default else []
-        value = self.prompt_for_value(prompt, values, "".join(tags).replace('::',':'))
+        value = self.prompt_for_value(prompt, values, ''.join(tags).replace('::', ':'))
         while value:
             if value[0] == '-':
                 value = self.tagify(value[1:])
@@ -288,18 +299,16 @@ class LedgerRenderer(OutputRenderer):
                     tags.remove(value)
             else:
                 value = self.tagify(value)
-                if not value in tags:
+                if value not in tags:
                     tags.append(value)
-            value = self.prompt_for_value(prompt, values, "".join(tags).replace('::',':'))
-        return "".join(tags).replace('::',':')
+            value = self.prompt_for_value(prompt, values, ''.join(tags).replace('::', ':'))
+        return ''.join(tags).replace('::', ':')
 
     def _payees_from_ledger(self):
         return self._from_ledger('payees')
 
-
     def _accounts_from_ledger(self):
         return self._from_ledger('accounts')
-
 
     def _from_ledger(self, command):
         ledger = 'ledger'
@@ -308,7 +317,7 @@ class LedgerRenderer(OutputRenderer):
                 ledger = f
                 break
 
-        cmd = [ledger, "-f", self.journal_file, command]
+        cmd = [ledger, '-f', self.journal_file, command]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout_data, stderr_data) = p.communicate()
         items = set()
@@ -326,10 +335,11 @@ class LedgerRenderer(OutputRenderer):
 
             All other lines are ignored.
         """
-        if not self.options.accounts_file: return
+        if not self.options.accounts_file:
+            return
         accounts = []
-        pattern = re.compile("^\s*account\s+([:A-Za-z0-9-_ ]+)$")
-        with open(self.options.accounts_file, "r", encoding='utf-8') as f:
+        pattern = re.compile('^\s*account\s+([:A-Za-z0-9-_ ]+)$')
+        with open(self.options.accounts_file, 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 mo = pattern.match(line)
                 if mo:
@@ -338,13 +348,12 @@ class LedgerRenderer(OutputRenderer):
         self.possible_accounts.update(accounts)
 
 
-
 class BeancountRenderer(OutputRenderer):
     import beancount
 
-    def tagify(self,value):
-        #no spaces or commas allowed
-        return value.replace(' ','-').replace(',','')
+    def tagify(self, value):
+        # No spaces or commas allowed
+        return value.replace(' ', '-').replace(',', '')
 
     def get_possible_accounts_and_payees(self):
         if self.journal_file:
@@ -366,7 +375,8 @@ class BeancountRenderer(OutputRenderer):
         else:
             for e in entries:
                 if type(e) is Transaction:
-                    if e.payee:payees.add(e.payee)
+                    if e.payee:
+                        payees.add(e.payee)
                     if e.tags:
                         for t in e.tags:
                             tags.add(t)
@@ -380,10 +390,9 @@ class BeancountRenderer(OutputRenderer):
         self.possible_tags.update(tags)
         self.possible_payees.update(payees)
 
-
-    def prompt_for_tags(self,prompt, values, default):
-        tags = " ".join(["#{}".format(t) for t in default.split() if t]) if default else []
-        value = self.prompt_for_value(prompt, values, " ".join(["#{}".format(t) for t in tags]))
+    def prompt_for_tags(self, prompt, values, default):
+        tags = ' '.join(['#{}'.format(t) for t in default.split() if t]) if default else []
+        value = self.prompt_for_value(prompt, values, ' '.join(['#{}'.format(t) for t in tags]))
         while value:
             if value[0] == '-':
                 value = self.tagify(value[1:])
@@ -391,7 +400,11 @@ class BeancountRenderer(OutputRenderer):
                     tags.remove(value)
             else:
                 value = self.tagify(value)
-                if not value in tags:
+                if value not in tags:
                     tags.append(value)
-            value = self.prompt_for_value(prompt, values, " ".join(["#{}".format(t) for t in tags]))
-        return " ".join(["#{}".format(t) for t in tags])
+            value = self.prompt_for_value(
+                prompt,
+                values,
+                ' '.join(['#{}'.format(t) for t in tags])
+            )
+        return ' '.join(['#{}'.format(t) for t in tags])
