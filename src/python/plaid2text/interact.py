@@ -2,8 +2,8 @@
 
 from prompt_toolkit import prompt  # NOQA: F401
 from prompt_toolkit.validation import ValidationError, Validator
-from prompt_toolkit.contrib.completers.filesystem import PathCompleter
-from prompt_toolkit.contrib.completers.base import Completer, Completion
+from prompt_toolkit.completion.filesystem import PathCompleter
+from prompt_toolkit.completion.base import Completer, Completion
 from six import string_types
 
 
