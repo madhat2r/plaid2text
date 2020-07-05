@@ -59,7 +59,7 @@ FILE_DEFAULTS = dotdict({
 DEFAULT_LEDGER_TEMPLATE = """\
 {transaction_date} {cleared_character} {payee} {tags}
     ; plaid_name: {name}
-    ; _id: {_id}
+    ; _id: {transaction_id}
     {associated_account:<60}   {currency} {amount}
     {posting_account:<60}
 """
@@ -67,7 +67,7 @@ DEFAULT_LEDGER_TEMPLATE = """\
 DEFAULT_BEANCOUNT_TEMPLATE = """\
 {transaction_date} {cleared_character} "{payee}" ""{tags}
     plaid_name: "{name}"
-    plaid_id: "{_id}"
+    plaid_id: "{transaction_id}"
     {associated_account:<60}   {amount} {currency}
     {posting_account}
 """

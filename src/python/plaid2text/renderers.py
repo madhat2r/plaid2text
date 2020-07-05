@@ -34,7 +34,7 @@ class Entry:
             self.transaction['addons'] = {}
 
         # The id for the transaction
-        self.transaction['transaction_id'] = self.transaction['_id']
+        self.transaction['transaction_id'] = self.transaction['transaction_id']
 
         # Get the date and convert it into a ledger/beancount formatted date.
         d8 = self.transaction['date']
@@ -189,7 +189,7 @@ class OutputRenderer(metaclass=ABCMeta):
             entry = Entry(t, self.options)
             payee, account, tags = self.get_payee_and_account(entry)
             dic = {}
-            dic['transaction_id'] = t['_id']
+            dic['transaction_id'] = t['transaction_id']
             dic['tags'] = tags
             dic['associated_account'] = account
             dic['payee'] = payee

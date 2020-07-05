@@ -1,11 +1,14 @@
 #! /usr/bin/env python3
 
 import datetime
+from dateutil import parser as date_parser
 import sqlite3
 import json
 
 from abc import ABCMeta, abstractmethod
 from pymongo import MongoClient, ASCENDING
+
+from .renderers import Entry
 
 TEXT_DOC = {
     'plaid2text': {
@@ -52,7 +55,7 @@ class MongoDBStorage(StorageManager):
 
     def save_transactions(self, transactions):
         for t in transactions:
-            id = t['_id']
+            id = t['transaction_id']
             # t.update(TEXT_DOC)
             # Convert datetime
             y, m, d = [int(i) for i in t['date'].split('-')]
@@ -65,9 +68,9 @@ class MongoDBStorage(StorageManager):
     def get_transactions(self, from_date=None, to_date=None, only_new=True):
         query = {}
         if only_new:
-            query['plaid2text.pulled_to_file'] = False
+            query['plaid2text.pulled_to_file'] = {"$ne": True}
 
-        if from_date and to_date and (from_date < to_date):
+        if from_date and to_date and (from_date <= to_date):
             query['date'] = {'$gte': from_date, '$lte': to_date}
         elif from_date and not to_date:
             query['date'] = {'$gte': from_date}
@@ -75,19 +78,18 @@ class MongoDBStorage(StorageManager):
             query['date'] = {'$lte': to_date}
 
         transactions = self.account.find(query).sort('date', ASCENDING)
+        return list(transactions)
 
-        return transactions
-
-    def update_transaction(self, update):
+    def update_transaction(self, update, mark_pulled=None):
         id = update.pop('transaction_id')
-        doc = {}
-        update['pulled_to_file'] = True
+
+        if mark_pulled:
+            update['pulled_to_file'  ] = mark_pulled            
         update['date_last_pulled'] = datetime.datetime.today()
-        doc['plaid2text'] = update
 
         self.account.update(
             {'_id': id},
-            {'$set': doc}
+            {'$set': {"plaid2text": update}}
         )
 
 
@@ -173,14 +175,21 @@ class SQLiteStorage():
             if ( len(t['plaid2text']) == 0 ):
                 # set empty objects ({}) to None to account for assumptions that None means not processed
                 t['plaid2text'] = None
-            ret.append(t)
+
+            t['date'] = date_parser.parse( t['date'] )        
+
+            entry = Entry(t, {})
+            ret.append( entry )
 
         return ret
 
-    def update_transaction(self, update):
+    def update_transaction(self, update, mark_pulled=None):
         trans_id = update.pop('transaction_id')
-        update['pulled_to_file'] = True
+        if mark_pulled:
+            update['pulled_to_file'  ] = mark_pulled            
         update['date_last_pulled'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        update['archived'] = null
 
         c = self.conn.cursor()
         c.execute("""

@@ -81,14 +81,6 @@ class SortingHelpFormatter(argparse.HelpFormatter):
         super(SortingHelpFormatter, self).add_arguments(actions)
 
 
-def _create_plaid_account(nickname):
-    """
-    Guides the user through creating a new Plaid connect account
-    """
-    pa = PlaidAccess()
-    pa.add_account(nickname)
-
-
 def _parse_args_and_config_file():
     """ Read options from config file and CLI args
     1. Reads hard coded cm.CONFIG_DEFAULTS
@@ -119,33 +111,8 @@ def _parse_args_and_config_file():
         )
     )
 
-    preparser.add_argument(
-        '--create-account',
-        action='store_true',
-        help=(
-            'Create a new Plaid account using the plaid-account argument as the new nickname'
-            ' (Example: {0})'.format('chase_savings')
-        )
-    )
     # Parse args with preparser, and find config file
     args, remaining_argv = preparser.parse_known_args()
-
-    if args.create_account and args.plaid_account:
-        if cm.account_exists(args.plaid_account):
-            print(
-                'Config file {0} already contains section for account: '
-                '{1}\n\n\You will have to MANUALLY delete it if you want to recreate it.'
-                .format(cm.FILE_DEFAULTS.config_file, args.plaid_account),
-                file=sys.stderr
-            )
-            sys.exit(1)
-        else:
-            _create_plaid_account(args.plaid_account)
-            print('New account {} successfully created.'.format(
-                args.plaid_account),
-                  file=sys.stdout)
-            sys.exit(0)
-            return
 
     defaults = cm.get_config(args.plaid_account) if args.plaid_account else {}
     # defaults = cm.CONFIG_DEFAULTS
@@ -443,7 +410,11 @@ def main():
         )
 
     if options.download_transactions:
-        trans = PlaidAccess().get_transactions(options.access_token, options.account)
+        if 'to_date' not in options or 'from_date' not in options:
+            print('When downloading, both start and end date are required', file=sys.stderr)
+            sys.exit(1)
+
+        trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date)
         sm.save_transactions(trans)
         print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
         sys.exit(0)
@@ -469,7 +440,6 @@ def main():
     if options.no_mark_pulled:
         for u in update_dict:
             sm.update_transaction(u)
-
 
 if __name__ == '__main__':
     main()
