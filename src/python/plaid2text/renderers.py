@@ -163,24 +163,25 @@ class OutputRenderer(metaclass=ABCMeta):
                 ret_tags = tags if len(tags) > 0 else ''
                 writer.writerow([desc, payee, account, ret_tags])
 
-    def process_transactions(self):
+    def process_transactions(self, callback=None):
         """
         Read transactions from Mongo (Plaid) and
         process them. Writes Ledger/Beancount formatted
         lines either to out_file or stdout.
 
         Parameters:
-        transactions: list of transactions returned from Mongo (Plaid)
-        out_file: ledger file to output or stdout
+        callback: A function taking a single transaction update object to store
+                  in the DB immediately after collecting the information from the user.
         """
-        out = self._process_plaid_transactions()
+        out = self._process_plaid_transactions(callback=callback)
+
         if self.options.headers_file:
             headers = ''.join(open(self.options.headers_file, mode='r').readlines())
             print(headers, file=self.options.outfile)
         print(*self.journal_lines, sep='\n', file=self.options.outfile)
-        return out
+        return out 
 
-    def _process_plaid_transactions(self):
+    def _process_plaid_transactions(self, callback=None):
         """Process plaid transaction and return beancount/ledger formatted
         lines.
         """
@@ -195,6 +196,10 @@ class OutputRenderer(metaclass=ABCMeta):
             dic['payee'] = payee
             dic['posting_account'] = self.options.posting_account
             out.append(dic)
+
+            # save the transactions into the database as they are processed
+            if callback: callback(dic)
+
             self.journal_lines.append(entry.journal_entry(payee, account, tags))
         return out
 

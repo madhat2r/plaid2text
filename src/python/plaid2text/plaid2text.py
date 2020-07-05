@@ -436,10 +436,14 @@ def main():
     else:
         out = LedgerRenderer(trxs, options)
 
-    update_dict = out.process_transactions()
+    callback = None
     if options.no_mark_pulled:
-        for u in update_dict:
-            sm.update_transaction(u)
+        callback = lambda dict: sm.update_transaction(dict, mark_pulled=False)
+
+    try:
+        update_dict = out.process_transactions(callback=callback)
+    except (KeyboardInterrupt, EOFError):
+        print("\nProcess interrupted by keyboard interrupt.");
 
 if __name__ == '__main__':
     main()
