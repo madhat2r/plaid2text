@@ -226,9 +226,12 @@ command line options take precedence over config file settings.
                         can use includes to pull in your other journal files
                         (default journal file: ~/.config/plaid2text/journal)
   --mapping-file FILE   file which holds the mappings (default: ~/.config/plaid2text/mapping)
+  --dbtype {mongodb,sqlite}
+                        The database type to use for storing transactions.
   --mongo-db STR        The name of the Mongo database (default: plaid2text)
   --mongo-db-uri STR    The URI for your MongoDB in the MongoDB URI format
                           (default: mongodb://localhost:27017)
+  --sqlite-db FILE      The path to the SQLite DB to use, if --dbtype is sqlite
   --no-mark-processed, -n
                         Do not mark pulled transactions. When given, the
                         pulled transactions will still be listed as new

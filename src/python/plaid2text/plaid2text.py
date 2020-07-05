@@ -225,6 +225,16 @@ def _parse_args_and_config_file():
             'download transactions into Mongo for given plaid account'
         )
     )
+
+    parser.add_argument(
+        '--dbtype',
+        choices=['mongodb', 'sqlite'],
+        help=(
+            'The type of database to use for storing transactions [mongodb | sqlite]'
+            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.dbtype)
+        )
+    )
+
     parser.add_argument(
         '--mongo-db',
         metavar='STR',
@@ -233,12 +243,22 @@ def _parse_args_and_config_file():
             ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db)
         )
     )
+
     parser.add_argument(
         '--mongo-db-uri',
         metavar='STR',
         help=(
             'The URI for your MongoDB in the MongoDB URI format'
             ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db_uri)
+        )
+    )
+
+    parser.add_argument(
+        '--sqlite-db',
+        metavar='STR',
+        help=(
+            'The path to the SQLite database for storing transactions'
+            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.sqlite_db)
         )
     )
     parser.add_argument(
@@ -408,17 +428,24 @@ def main():
     if not isinstance(options.clear_screen, bool):
         options.clear_screen = options.clear_screen.lower() in truthy
 
-    sm = storage_manager.StorageManager(
-        options.mongo_db,
-        options.mongo_db_uri,
-        options.plaid_account,
-        options.posting_account
-    )
+    if options.dbtype == 'mongodb':
+        sm = storage_manager.MongoDBStorage(
+            options.mongo_db,
+            options.mongo_db_uri,
+            options.plaid_account,
+            options.posting_account
+        )
+    else:
+        sm = storage_manager.SQLiteStorage(
+            options.sqlite_db,
+            options.plaid_account,
+            options.posting_account
+        )
 
     if options.download_transactions:
         trans = PlaidAccess().get_transactions(options.access_token, options.account)
         sm.save_transactions(trans)
-        print('Transactions successfully downloaded and saved into Mongo', file=sys.stdout)
+        print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
         sys.exit(0)
 
     if not options.config_file:
