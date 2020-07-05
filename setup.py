@@ -25,7 +25,7 @@ try:
         'pymongo==3.10.1',
         
         # used in console prompts/autocompletion
-        'prompt_toolkit',
+        'prompt-toolkit==3.0.5',
         
         # the heart of the program
         'plaid-python==7.1.0',
