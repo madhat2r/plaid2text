@@ -16,7 +16,7 @@ class Entry:
     This represents one entry (transaction) from Plaid.
     """
 
-    def __init__(self, transaction, options):
+    def __init__(self, transaction, options={}):
         """Parameters:
         transaction: a plaid transaction
 
@@ -38,7 +38,7 @@ class Entry:
 
         # Get the date and convert it into a ledger/beancount formatted date.
         d8 = self.transaction['date']
-        d8_format = options.output_date_format
+        d8_format = options.output_date_format if options and 'output_date_format' in options else '%Y-%m-%d'
         self.transaction['transaction_date'] = d8.date().strftime(d8_format)
 
         self.desc = self.transaction['name']
