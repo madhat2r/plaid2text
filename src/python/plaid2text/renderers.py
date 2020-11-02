@@ -16,7 +16,7 @@ class Entry:
     This represents one entry (transaction) from Plaid.
     """
 
-    def __init__(self, transaction, options):
+    def __init__(self, transaction, options={}):
         """Parameters:
         transaction: a plaid transaction
 
@@ -34,11 +34,11 @@ class Entry:
             self.transaction['addons'] = {}
 
         # The id for the transaction
-        self.transaction['transaction_id'] = self.transaction['_id']
+        self.transaction['transaction_id'] = self.transaction['transaction_id']
 
         # Get the date and convert it into a ledger/beancount formatted date.
         d8 = self.transaction['date']
-        d8_format = options.output_date_format
+        d8_format = options.output_date_format if options and 'output_date_format' in options else '%Y-%m-%d'
         self.transaction['transaction_date'] = d8.date().strftime(d8_format)
 
         self.desc = self.transaction['name']
@@ -163,24 +163,25 @@ class OutputRenderer(metaclass=ABCMeta):
                 ret_tags = tags if len(tags) > 0 else ''
                 writer.writerow([desc, payee, account, ret_tags])
 
-    def process_transactions(self):
+    def process_transactions(self, callback=None):
         """
         Read transactions from Mongo (Plaid) and
         process them. Writes Ledger/Beancount formatted
         lines either to out_file or stdout.
 
         Parameters:
-        transactions: list of transactions returned from Mongo (Plaid)
-        out_file: ledger file to output or stdout
+        callback: A function taking a single transaction update object to store
+                  in the DB immediately after collecting the information from the user.
         """
-        out = self._process_plaid_transactions()
+        out = self._process_plaid_transactions(callback=callback)
+
         if self.options.headers_file:
             headers = ''.join(open(self.options.headers_file, mode='r').readlines())
             print(headers, file=self.options.outfile)
         print(*self.journal_lines, sep='\n', file=self.options.outfile)
-        return out
+        return out 
 
-    def _process_plaid_transactions(self):
+    def _process_plaid_transactions(self, callback=None):
         """Process plaid transaction and return beancount/ledger formatted
         lines.
         """
@@ -189,12 +190,16 @@ class OutputRenderer(metaclass=ABCMeta):
             entry = Entry(t, self.options)
             payee, account, tags = self.get_payee_and_account(entry)
             dic = {}
-            dic['transaction_id'] = t['_id']
+            dic['transaction_id'] = t['transaction_id']
             dic['tags'] = tags
             dic['associated_account'] = account
             dic['payee'] = payee
             dic['posting_account'] = self.options.posting_account
             out.append(dic)
+
+            # save the transactions into the database as they are processed
+            if callback: callback(dic)
+
             self.journal_lines.append(entry.journal_entry(payee, account, tags))
         return out
 

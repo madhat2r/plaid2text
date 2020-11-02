@@ -27,6 +27,7 @@ def get_locale_currency_symbol():
     conv = locale.localeconv()
     return conv['int_curr_symbol']
 
+DEFAULT_CONFIG_DIR = os.path.expanduser('~/.config/plaid2text')
 
 CONFIG_DEFAULTS = dotdict({
     # For configparser, int must be converted to str
@@ -41,11 +42,11 @@ CONFIG_DEFAULTS = dotdict({
     'output_date_format': '%Y/%m/%d',
     'quiet': False,
     'tags': False,
+    'dbtype': 'mongodb',
     'mongo_db': 'plaid2text',
-    'mongo_db_uri': 'mongodb://localhost:27017'
+    'mongo_db_uri': 'mongodb://localhost:27017',
+    'sqlite_db': os.path.join(DEFAULT_CONFIG_DIR, 'transactions.db')
 })
-
-DEFAULT_CONFIG_DIR = os.path.expanduser('~/.config/plaid2text')
 
 FILE_DEFAULTS = dotdict({
     'config_file': os.path.join(DEFAULT_CONFIG_DIR, 'config'),
@@ -58,7 +59,7 @@ FILE_DEFAULTS = dotdict({
 DEFAULT_LEDGER_TEMPLATE = """\
 {transaction_date} {cleared_character} {payee} {tags}
     ; plaid_name: {name}
-    ; _id: {_id}
+    ; _id: {transaction_id}
     {associated_account:<60}   {currency} {amount}
     {posting_account:<60}
 """
@@ -66,7 +67,7 @@ DEFAULT_LEDGER_TEMPLATE = """\
 DEFAULT_BEANCOUNT_TEMPLATE = """\
 {transaction_date} {cleared_character} "{payee}" ""{tags}
     plaid_name: "{name}"
-    plaid_id: "{_id}"
+    plaid_id: "{transaction_id}"
     {associated_account:<60}   {amount} {currency}
     {posting_account}
 """

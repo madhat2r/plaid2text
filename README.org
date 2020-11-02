@@ -131,46 +131,22 @@ In order to get transactions from Plaid, you must create an account. In order to
 create an account, you must authenticate yourself to your institution via your
 username and password, and also most institutions require some form of multi
 factor authentication, usually in the form of security questions, or codes sent
-to registered phone/email for the account. Using =plaid2text= this is easy to
-accomplish. 
+to registered phone/email for the account. 
 
-First issue the following command:
+Creation of the account is not directly supported in plaid2text. Instead, you 
+need to obtain your credentials using the method described in ebridges/plaid2qif
 
-=plaid2text account_nickname --create-account=
+https://github.com/ebridges/plaid2qif#steps-to-authenticate-with-your-financial-institution
 
-As an example let's say I am setting up an account for my personal checking, and the
-institution I use is Chase. I might use this command to create it.
+Once you have the credentials, you need to add the accounts to your plaid2text
+config file like so:
 
-=plaid2text chase_checking --create-account=
-
-This would allow me to setup and account with the nickname =chase_checking=. You
-will use the nickname for downloading and parsing transactions, so make
-it something meaningful for you.
-
-Once you have issued the above command =plaid2text= will present you with a list of
-institutions from which to choose.
-
-#+BEGIN_SRC
-What bank is this account going to be for? 
-1   Bank of America
-2   Chase
-3   Wells Fargo
-4   Citi
-5   US Bank
-6   USAA
-7   American Express
-8   Navy Federal Credit Union
-9   SunTrust
-
-Enter Number [q to quit]:
-#+END_SRC
-
-In our example we will choose =2= and hit enter. This will take us to the
-authorization screen, and will prompt for your credentials and follow up with
-the multi factor authentication (if required). If you enter everything correctly
-you will have setup your first account in Plaid. The program will then prompt
-you for some default config options. Config options are covered in the proceeding
-sections.
+```
+[Credit Card]
+access_token=access-development-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+item_id=EXAMPLEPFfqLciBh47IZ4XEXAMPLEYr0vPW31oBQU52dgU
+account=EXAMPLEJSbnSBXWguEuVEXAMPLEhjHtwRcAlOWN7uzXrwf
+```
 
 Note: wait at least 15 minutes before the first download of your transactions,
 this give Plaid time to collect the information from your institution. Plaid
@@ -178,7 +154,7 @@ says it will have them within 240 seconds, but I think it's better to give it
 time. 
 
 Also, different institutions keep your historical data for different
-lengths of time. You can check the availability here: [[https://github.com/plaid/support/blob/master/data-availability.md][Data Availability]]
+lengths of time. 
 
 * Arguments Summary
 
@@ -226,9 +202,12 @@ command line options take precedence over config file settings.
                         can use includes to pull in your other journal files
                         (default journal file: ~/.config/plaid2text/journal)
   --mapping-file FILE   file which holds the mappings (default: ~/.config/plaid2text/mapping)
+  --dbtype {mongodb,sqlite}
+                        The database type to use for storing transactions.
   --mongo-db STR        The name of the Mongo database (default: plaid2text)
   --mongo-db-uri STR    The URI for your MongoDB in the MongoDB URI format
                           (default: mongodb://localhost:27017)
+  --sqlite-db FILE      The path to the SQLite DB to use, if --dbtype is sqlite
   --no-mark-processed, -n
                         Do not mark pulled transactions. When given, the
                         pulled transactions will still be listed as new
@@ -483,8 +462,9 @@ these are created when setting up accounts, and are not entered manually.
     secret = xxxxxxxxx8c9a0cd27xxxxxxxxxxxx
 
     [chase_checking]
-    access_token = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxdf0fbb4cc4f5323f7ccd6
+    access_token = access-development-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
     account = xxxxxxxxxxxxxPzJ3nAkFxxxxxxxxxxxxxxxx
+    item_id = xxxxxxxxxxxxxxxcc4f53xxxxxxxxxxxxxxxxx
     currency = USD
     posting_account = Assets:Bank:Chase:Checking
     mapping_file = ~/.config/plaid2text/chase_checking/mapping_bc

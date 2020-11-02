@@ -81,14 +81,6 @@ class SortingHelpFormatter(argparse.HelpFormatter):
         super(SortingHelpFormatter, self).add_arguments(actions)
 
 
-def _create_plaid_account(nickname):
-    """
-    Guides the user through creating a new Plaid connect account
-    """
-    pa = PlaidAccess()
-    pa.add_account(nickname)
-
-
 def _parse_args_and_config_file():
     """ Read options from config file and CLI args
     1. Reads hard coded cm.CONFIG_DEFAULTS
@@ -119,33 +111,8 @@ def _parse_args_and_config_file():
         )
     )
 
-    preparser.add_argument(
-        '--create-account',
-        action='store_true',
-        help=(
-            'Create a new Plaid account using the plaid-account argument as the new nickname'
-            ' (Example: {0})'.format('chase_savings')
-        )
-    )
     # Parse args with preparser, and find config file
     args, remaining_argv = preparser.parse_known_args()
-
-    if args.create_account and args.plaid_account:
-        if cm.account_exists(args.plaid_account):
-            print(
-                'Config file {0} already contains section for account: '
-                '{1}\n\n\You will have to MANUALLY delete it if you want to recreate it.'
-                .format(cm.FILE_DEFAULTS.config_file, args.plaid_account),
-                file=sys.stderr
-            )
-            sys.exit(1)
-        else:
-            _create_plaid_account(args.plaid_account)
-            print('New account {} successfully created.'.format(
-                args.plaid_account),
-                  file=sys.stdout)
-            sys.exit(0)
-            return
 
     defaults = cm.get_config(args.plaid_account) if args.plaid_account else {}
     # defaults = cm.CONFIG_DEFAULTS
@@ -225,6 +192,16 @@ def _parse_args_and_config_file():
             'download transactions into Mongo for given plaid account'
         )
     )
+
+    parser.add_argument(
+        '--dbtype',
+        choices=['mongodb', 'sqlite'],
+        help=(
+            'The type of database to use for storing transactions [mongodb | sqlite]'
+            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.dbtype)
+        )
+    )
+
     parser.add_argument(
         '--mongo-db',
         metavar='STR',
@@ -233,12 +210,22 @@ def _parse_args_and_config_file():
             ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db)
         )
     )
+
     parser.add_argument(
         '--mongo-db-uri',
         metavar='STR',
         help=(
             'The URI for your MongoDB in the MongoDB URI format'
             ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db_uri)
+        )
+    )
+
+    parser.add_argument(
+        '--sqlite-db',
+        metavar='STR',
+        help=(
+            'The path to the SQLite database for storing transactions'
+            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.sqlite_db)
         )
     )
     parser.add_argument(
@@ -408,17 +395,28 @@ def main():
     if not isinstance(options.clear_screen, bool):
         options.clear_screen = options.clear_screen.lower() in truthy
 
-    sm = storage_manager.StorageManager(
-        options.mongo_db,
-        options.mongo_db_uri,
-        options.plaid_account,
-        options.posting_account
-    )
+    if options.dbtype == 'mongodb':
+        sm = storage_manager.MongoDBStorage(
+            options.mongo_db,
+            options.mongo_db_uri,
+            options.plaid_account,
+            options.posting_account
+        )
+    else:
+        sm = storage_manager.SQLiteStorage(
+            options.sqlite_db,
+            options.plaid_account,
+            options.posting_account
+        )
 
     if options.download_transactions:
-        trans = PlaidAccess().get_transactions(options.access_token, options.account)
+        if 'to_date' not in options or 'from_date' not in options:
+            print('When downloading, both start and end date are required', file=sys.stderr)
+            sys.exit(1)
+
+        trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date)
         sm.save_transactions(trans)
-        print('Transactions successfully downloaded and saved into Mongo', file=sys.stdout)
+        print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
         sys.exit(0)
 
     if not options.config_file:
@@ -438,11 +436,14 @@ def main():
     else:
         out = LedgerRenderer(trxs, options)
 
-    update_dict = out.process_transactions()
+    callback = None
     if options.no_mark_pulled:
-        for u in update_dict:
-            sm.update_transaction(u)
+        callback = lambda dict: sm.update_transaction(dict, mark_pulled=False)
 
+    try:
+        update_dict = out.process_transactions(callback=callback)
+    except (KeyboardInterrupt, EOFError):
+        print("\nProcess interrupted by keyboard interrupt.");
 
 if __name__ == '__main__':
     main()
