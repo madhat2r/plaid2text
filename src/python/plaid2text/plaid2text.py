@@ -114,6 +114,9 @@ def _parse_args_and_config_file():
     # Parse args with preparser, and find config file
     args, remaining_argv = preparser.parse_known_args()
 
+    if "--create-account" in remaining_argv:
+        cm.create_account(args.plaid_account)
+
     defaults = cm.get_config(args.plaid_account) if args.plaid_account else {}
     # defaults = cm.CONFIG_DEFAULTS
 
@@ -143,6 +146,14 @@ def _parse_args_and_config_file():
         help=(
             'file which contains contents to be written to the top of the output file'
             ' (default : {0})'.format(cm.FILE_DEFAULTS.headers_file)
+        )
+    )
+    parser.add_argument(
+        '--create-account',
+        action='store_true',
+        help=(
+            'create a new account'
+            ' (default : {0})'.format(cm.CONFIG_DEFAULTS.create_account)
         )
     )
 
