@@ -266,8 +266,10 @@ def create_account(account):
             print(item['account_id'])
         account_id = prompt('\nEnter account_id of desired account: ', validator=NullValidator())
         plaid['account'] = account_id
-    except Exception as e:
-        return False
+
+    except plaid_errors.ItemError as ex:
+        print("    %s" % ex, file=sys.stderr )
+        sys.exit(1)
     else:
         with open(FILE_DEFAULTS.config_file, mode='a') as f:
             config.write(f)
