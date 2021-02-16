@@ -234,7 +234,7 @@ def create_account(account):
             'user': {
                 'client_user_id': '123-test-user-id',
             },
-            'products': ['auth', 'transactions'],
+            'products': ['transactions'],
             'client_name': "Plaid Test App",
             'country_codes': ['US'],
             'language': 'en',
@@ -292,7 +292,7 @@ def generate_auth_page(link_token):
     // The metadata object contains info about the institution the
     // user selected and the account ID, if selectAccount is enabled.
     console.log('public_token: '+public_token+', metadata: '+JSON.stringify(metadata));
-    document.getElementById("results").innerHTML = "public_token: " + public_token;
+    document.getElementById("results").innerHTML = "public_token: " + public_token + "<br>metadata: " + metadata;
     },
     onExit: function(err, metadata) {
     // The user exited the Link flow.
