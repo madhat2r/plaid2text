@@ -28,12 +28,14 @@ class PlaidAccess():
                          access_token,
                          start_date,
                          end_date,
-                         account_ids=None):
+                         account_ids):
         """Get transaction for a given account for the given dates"""
 
         ret = []
         total_transactions = None
         page = 0
+        account_array = []
+        account_array.append(account_ids)
         while True:
             page += 1 
             if total_transactions:
@@ -46,7 +48,7 @@ class PlaidAccess():
                                 access_token,
                                 start_date.strftime("%Y-%m-%d"),
                                 end_date.strftime("%Y-%m-%d"),
-                                account_ids=account_ids,
+                                account_ids=account_array,
                                 offset=len(ret))
             except plaid_errors.ItemError as ex:
                 print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)

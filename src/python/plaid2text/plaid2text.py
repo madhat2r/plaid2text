@@ -425,7 +425,7 @@ def main():
             print('When downloading, both start and end date are required', file=sys.stderr)
             sys.exit(1)
 
-        trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date)
+        trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date,account_ids=options.account)
         sm.save_transactions(trans)
         print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
         sys.exit(0)
