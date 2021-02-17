@@ -6,6 +6,10 @@ import os
 import sys
 
 from plaid2text.interact import prompt, NullValidator, YesNoValidator
+from plaid import Client
+from plaid import errors as plaid_errors
+
+import json
 
 
 class dotdict(dict):
@@ -32,6 +36,7 @@ DEFAULT_CONFIG_DIR = os.path.expanduser('~/.config/plaid2text')
 CONFIG_DEFAULTS = dotdict({
     # For configparser, int must be converted to str
     # For configparser, boolean must be set to False
+    'create_account': False,
     'posting_account': 'Assets:Bank:Checking',
     'output_format': 'beancount',
     'clear_screen': False,
@@ -54,7 +59,8 @@ FILE_DEFAULTS = dotdict({
     'journal_file': os.path.join(DEFAULT_CONFIG_DIR, 'journal'),
     'mapping_file': os.path.join(DEFAULT_CONFIG_DIR, 'mapping'),
     'headers_file': os.path.join(DEFAULT_CONFIG_DIR, 'headers'),
-    'template_file': os.path.join(DEFAULT_CONFIG_DIR, 'template')})
+    'template_file': os.path.join(DEFAULT_CONFIG_DIR, 'template'),
+    'auth_file': os.path.join(DEFAULT_CONFIG_DIR, 'auth.html')})
 
 DEFAULT_LEDGER_TEMPLATE = """\
 {transaction_date} {cleared_character} {payee} {tags}
@@ -210,6 +216,107 @@ def find_first_file(arg_file, alternatives):
             found = loc  # existing and readable
             break
     return found
+
+
+def create_account(account):
+    try:
+        _create_directory_tree(FILE_DEFAULTS.config_file)
+        config = configparser.ConfigParser(interpolation=None)
+        config[account] = OrderedDict()
+        plaid = config[account]
+        client_id, secret = get_plaid_config()
+        # client_id = prompt('Enter your Plaid client_id: ', validator=NullValidator())
+        # plaid['client_id'] = client_id
+        # secret = prompt('Enter your Plaid secret: ', validator=NullValidator())
+        # plaid['secret'] = secret
+        
+        configs = {
+            'user': {
+                'client_user_id': '123-test-user-id',
+            },
+            'products': ['transactions'],
+            'client_name': "Plaid Test App",
+            'country_codes': ['US'],
+            'language': 'en',
+        }
+
+        # create link token
+        client = Client(client_id, secret, "development", suppress_warnings=True)
+        response = client.LinkToken.create(configs)
+        link_token = response['link_token']
+
+        generate_auth_page(link_token)
+        print("\n\nPlease open " + FILE_DEFAULTS.auth_file + " to authenticate your account with Plaid")
+        public_token = prompt('Enter your public_token from the auth page: ', validator=NullValidator())
+        # plaid['public_token'] = public_token
+
+        response = client.Item.public_token.exchange(public_token)
+        access_token = response['access_token']
+        plaid['access_token'] = access_token
+        item_id = response['item_id']
+        plaid['item_id'] = item_id
+
+        response = client.Accounts.get(access_token)
+
+        accounts = response['accounts']
+
+        print("\n\nAccounts:\n")
+        for item in accounts:
+            print(item['name'] + ":")
+            print(item['account_id'])
+        account_id = prompt('\nEnter account_id of desired account: ', validator=NullValidator())
+        plaid['account'] = account_id
+
+    except plaid_errors.ItemError as ex:
+        print("    %s" % ex, file=sys.stderr )
+        sys.exit(1)
+    else:
+        with open(FILE_DEFAULTS.config_file, mode='a') as f:
+            config.write(f)
+    return True
+
+def generate_auth_page(link_token):
+    page = """<html>
+    <body>
+    <button id='linkButton'>Open Link - Institution Select</button>
+    <p id="results"></p>
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    <script>
+    var linkHandler = Plaid.create({
+    token: '""" + link_token + """',
+    onLoad: function() {
+    // The Link module finished loading.
+    },
+    onSuccess: function(public_token, metadata) {
+    // Send the public_token to your app server here.
+    // The metadata object contains info about the institution the
+    // user selected and the account ID, if selectAccount is enabled.
+    console.log('public_token: '+public_token+', metadata: '+JSON.stringify(metadata));
+    document.getElementById("results").innerHTML = "public_token: " + public_token + "<br>metadata: " + metadata;
+    },
+    onExit: function(err, metadata) {
+    // The user exited the Link flow.
+    if (err != null) {
+    // The user encountered a Plaid API error prior to exiting.
+    }
+    // metadata contains information about the institution
+    // that the user selected and the most recent API request IDs.
+    // Storing this information can be helpful for support.
+    }
+    });
+
+    // Trigger the standard institution select view
+    document.getElementById('linkButton').onclick = function() {
+    linkHandler.open();
+    };
+    </script>
+    </body>
+    </html>
+    """
+
+    f = open(FILE_DEFAULTS.auth_file, mode='w')
+    f.write(page)
+    f.close()
 
 
 if __name__ == '__main__':

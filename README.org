@@ -133,20 +133,9 @@ username and password, and also most institutions require some form of multi
 factor authentication, usually in the form of security questions, or codes sent
 to registered phone/email for the account. 
 
-Creation of the account is not directly supported in plaid2text. Instead, you 
-need to obtain your credentials using the method described in ebridges/plaid2qif
+The =--create-account= flag will create a new account using the plaid-account argument as the new nickname. This semi-automate the process of creating and authenticating an account with your instituion for your Plaid account. Once you run =plaid2text accountName --create-account= you will be promted to open an html file located in your configuration folder (default is =\~/.config/plaid2text/auth.html=). Click on the button labeled =Open Link - Institution Select= and you will be prompted to authenticate with the instituion. Once you do, you will see your public_token displayed on the page. Enter that back into =plaid2text=.
 
-https://github.com/ebridges/plaid2qif#steps-to-authenticate-with-your-financial-institution
-
-Once you have the credentials, you need to add the accounts to your plaid2text
-config file like so:
-
-```
-[Credit Card]
-access_token=access-development-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-item_id=EXAMPLEPFfqLciBh47IZ4XEXAMPLEYr0vPW31oBQU52dgU
-account=EXAMPLEJSbnSBXWguEuVEXAMPLEhjHtwRcAlOWN7uzXrwf
-```
+=plaid2text= will then display a list of accounts associated with that institution and their corresponding account_id's. Paste the desired account_id and your account is ready to be used with =plaid2text=.
 
 Note: wait at least 15 minutes before the first download of your transactions,
 this give Plaid time to collect the information from your institution. Plaid
