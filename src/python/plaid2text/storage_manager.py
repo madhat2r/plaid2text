@@ -55,15 +55,16 @@ class MongoDBStorage(StorageManager):
 
     def save_transactions(self, transactions):
         for t in transactions:
-            id = t['transaction_id']
-            # t.update(TEXT_DOC)
-            # Convert datetime
-            y, m, d = [int(i) for i in t['date'].split('-')]
-            t['date'] = datetime.datetime(y, m, d)
-            doc = {'$set': t}
-            # Add default plaid2text to new inserts
-            doc['$setOnInsert'] = TEXT_DOC
-            self.account.update_many({'_id': id}, doc, True)
+            if not t['pending']:
+                id = t['transaction_id']
+                # t.update(TEXT_DOC)
+                # Convert datetime
+                y, m, d = [int(i) for i in t['date'].split('-')]
+                t['date'] = datetime.datetime(y, m, d)
+                doc = {'$set': t}
+                # Add default plaid2text to new inserts
+                doc['$setOnInsert'] = TEXT_DOC
+                self.account.update_many({'_id': id}, doc, True)
 
     def get_transactions(self, from_date=None, to_date=None, only_new=True):
         query = {}
