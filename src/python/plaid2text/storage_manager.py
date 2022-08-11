@@ -179,8 +179,7 @@ class SQLiteStorage():
 
             t['date'] = date_parser.parse( t['date'] )        
 
-            entry = Entry(t, {})
-            ret.append( entry )
+            ret.append(t)
 
         return ret
 
