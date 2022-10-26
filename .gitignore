@@ -135,4 +135,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# Apple filesystem files
+.DS_Store
+
 Pipfile*
