@@ -88,7 +88,7 @@ class MongoDBStorage(StorageManager):
         if mark_pulled:            
             update['date_last_pulled'] = datetime.datetime.now()
 
-        self.account.update(
+        self.account.update_one(
             {'_id': id},
             {'$set': {"plaid2text": update}}
         )
