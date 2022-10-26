@@ -22,14 +22,14 @@ try:
     from setuptools import setup, Extension
     setup_extra_kwargs.update(install_requires = [
         # used for working with MongoDB
-        'pymongo==3.10.1',
+        'pymongo==4.2.0',
         
         # used in console prompts/autocompletion
-        'prompt-toolkit==3.0.5',
+        'prompt-toolkit==3.0.30',
         
         # the heart of the program
-        'plaid-python==7.1.0',
-        'beancount==2.2.1',
+        'plaid-python==7.5.0',
+        'beancount==2.3.5',
     ])
 
 except ImportError:
