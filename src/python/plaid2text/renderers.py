@@ -196,6 +196,7 @@ class OutputRenderer(metaclass=ABCMeta):
             dic['payee'] = payee
             dic['posting_account'] = self.options.posting_account
             out.append(dic)
+            dic['date_downloaded'] = t['plaid2text']['date_downloaded']
 
             # save the transactions into the database as they are processed
             if callback: callback(dic)

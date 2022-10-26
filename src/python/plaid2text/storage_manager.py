@@ -17,7 +17,7 @@ TEXT_DOC = {
         'posting_account': '',
         'associated_account': '',
         'date_downloaded': datetime.datetime.today(),
-        'date_last_pulled': datetime.datetime.today(),
+        'date_last_pulled': '',
         'pulled_to_file':  False
     }
 }
@@ -84,9 +84,9 @@ class MongoDBStorage(StorageManager):
     def update_transaction(self, update, mark_pulled=None):
         id = update.pop('transaction_id')
 
-        if mark_pulled:
-            update['pulled_to_file'  ] = mark_pulled            
-        update['date_last_pulled'] = datetime.datetime.today()
+        update['pulled_to_file'  ] = mark_pulled
+        if mark_pulled:            
+            update['date_last_pulled'] = datetime.datetime.today()
 
         self.account.update(
             {'_id': id},
@@ -185,8 +185,7 @@ class SQLiteStorage():
 
     def update_transaction(self, update, mark_pulled=None):
         trans_id = update.pop('transaction_id')
-        if mark_pulled:
-            update['pulled_to_file'  ] = mark_pulled            
+        update['pulled_to_file'  ] = mark_pulled            
         update['date_last_pulled'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         update['archived'] = null

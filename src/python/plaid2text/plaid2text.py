@@ -314,6 +314,7 @@ def _parse_args_and_config_file():
         '--no-mark-pulled',
         '-n',
         action='store_false',
+        default=False,
         help=(
             'Do not mark pulled transactions. '
             'When given, the pulled transactions will still be listed '
@@ -447,9 +448,7 @@ def main():
     else:
         out = LedgerRenderer(trxs, options)
 
-    callback = None
-    if options.no_mark_pulled:
-        callback = lambda dict: sm.update_transaction(dict, mark_pulled=False)
+    callback = lambda dict: sm.update_transaction(dict, mark_pulled=not options.no_mark_pulled)
 
     try:
         update_dict = out.process_transactions(callback=callback)
