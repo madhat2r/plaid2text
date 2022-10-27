@@ -11,7 +11,7 @@ https://github.com/quentinsf/icsv2ledger
 """
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from operator import attrgetter
 import re
 import sys
@@ -422,9 +422,15 @@ def main():
         )
 
     if options.download_transactions:
-        if 'to_date' not in options or 'from_date' not in options:
-            print('When downloading, both start and end date are required', file=sys.stderr)
-            sys.exit(1)
+        if 'to_date' not in options or options.to_date == None:
+            options.to_date  = datetime.today()
+        if 'from_date' not in options or options.from_date == None:
+            try:
+                options.from_date = sm.get_latest_transaction_date() - timedelta(days=10)
+            except:
+                date_input = input('Enter the starting date from which to fetch transactions in YYYY-MM-DD format:\n')
+                year, month, day = map(int, date_input.split('-'))
+                options.from_date = date(year, month, day)
 
         trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date,account_ids=options.account)
         sm.save_transactions(trans)

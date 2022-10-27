@@ -6,7 +6,7 @@ import sqlite3
 import json
 
 from abc import ABCMeta, abstractmethod
-from pymongo import MongoClient, ASCENDING
+from pymongo import MongoClient, ASCENDING, DESCENDING
 
 from .renderers import Entry
 
@@ -93,6 +93,9 @@ class MongoDBStorage(StorageManager):
             {'$set': {"plaid2text": update}}
         )
 
+    def get_latest_transaction_date(self):
+        latest = list(self.account.find().sort("date", DESCENDING).limit(1))[0]['date']
+        return latest
 
 class SQLiteStorage():
     def __init__(self, dbpath, account, posting_account):
