@@ -4,6 +4,7 @@ from collections import OrderedDict
 import configparser
 import os
 import sys
+import re
 
 from plaid2text.interact import prompt, NullValidator, YesNoValidator
 from plaid import Client
@@ -318,6 +319,37 @@ def generate_auth_page(link_token):
     f.write(page)
     f.close()
 
+def update_link_token(access_token):
+    print ("Trying to update Plaid Link token")
+
+    # Obtain new link token
+    client_id, secret = get_plaid_config()
+    configs = {
+    'user': {
+        'client_user_id': '123-test-user-id',
+    },
+    'client_name': "Plaid Test App",
+    'country_codes': ['US'],
+    'language': 'en',
+    'access_token': access_token
+    }
+    client = Client(client_id, secret, "development", suppress_warnings=True)
+    response = client.LinkToken.create(configs)
+    link_token = response['link_token']
+
+    # Update auth.html file with new link token
+
+    with open (FILE_DEFAULTS['auth_file'], "r") as f:
+        data = f.read()
+        oldText = re.search("token: '.*'", data)[0]
+        newText = "token: '" + link_token + "'"
+        data = data.replace (oldText, newText)
+    
+    with open (FILE_DEFAULTS['auth_file'], "w") as f:
+        f.write(data)
+
+    print('Link token updated.\nRun \'python3 -m http.server\' from ',DEFAULT_CONFIG_DIR,' and then visit \'localhost:8200\' in your browser to complete authentication with Plaid. Then, start downloading transactions again.')
+    sys.exit(0)
 
 if __name__ == '__main__':
     get_locale_currency_symbol()

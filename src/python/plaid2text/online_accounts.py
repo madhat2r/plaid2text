@@ -51,9 +51,19 @@ class PlaidAccess():
                                 account_ids=account_array,
                                 offset=len(ret))
             except plaid_errors.ItemError as ex:
-                print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
-                print("    %s" % ex, file=sys.stderr )
-                sys.exit(1)
+                if ex.code == 'ITEM_LOGIN_REQUIRED':
+#                    try:
+                    cm.update_link_token(access_token)
+                    '''
+                    except:
+                        print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
+                        print("    %s" % ex, file=sys.stderr )
+                        sys.exit(1)                        
+                    '''                       
+                else:
+                    print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
+                    print("    %s" % ex, file=sys.stderr )
+                    sys.exit(1)
 
             total_transactions = response['total_transactions']
 
