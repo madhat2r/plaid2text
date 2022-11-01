@@ -192,11 +192,12 @@ class OutputRenderer(metaclass=ABCMeta):
             dic = {}
             dic['transaction_id'] = t['transaction_id']
             dic['tags'] = tags
-            dic['associated_account'] = account
             dic['payee'] = payee
             dic['posting_account'] = self.options.posting_account
-            out.append(dic)
+            dic['associated_account'] = account
             dic['date_downloaded'] = t['plaid2text']['date_downloaded']
+            dic['date_last_pulled'] = t['plaid2text']['date_last_pulled']
+            out.append(dic)
 
             # save the transactions into the database as they are processed
             if callback: callback(dic)

@@ -83,9 +83,8 @@ class MongoDBStorage(StorageManager):
 
     def update_transaction(self, update, mark_pulled=None):
         id = update.pop('transaction_id')
-
-        update['pulled_to_file'  ] = mark_pulled
-        if mark_pulled:            
+        update['pulled_to_file'] = mark_pulled
+        if mark_pulled:
             update['date_last_pulled'] = datetime.datetime.now()
 
         self.account.update_one(
@@ -188,7 +187,7 @@ class SQLiteStorage():
 
     def update_transaction(self, update, mark_pulled=None):
         trans_id = update.pop('transaction_id')
-        update['pulled_to_file'  ] = mark_pulled
+        update['pulled_to_file'] = mark_pulled
         if mark_pulled:            
             update['date_last_pulled'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 

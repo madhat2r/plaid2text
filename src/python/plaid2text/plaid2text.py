@@ -313,7 +313,7 @@ def _parse_args_and_config_file():
     parser.add_argument(
         '--no-mark-pulled',
         '-n',
-        action='store_false',
+        action='store_true',
         default=False,
         help=(
             'Do not mark pulled transactions. '
