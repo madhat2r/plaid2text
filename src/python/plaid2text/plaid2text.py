@@ -428,9 +428,13 @@ def main():
             try:
                 options.from_date = sm.get_latest_transaction_date() - timedelta(days=10)
             except:
-                date_input = input('Enter the starting date from which to fetch transactions in YYYY-MM-DD format:\n')
-                year, month, day = map(int, date_input.split('-'))
-                options.from_date = date(year, month, day)
+                while True:
+                    date_input = input('Enter the starting date from which to fetch transactions in YYYY-MM-DD format, or press Ctrl + C to quit:\n')
+                    try:
+                        options.from_date = datetime.strptime(date_input, '%Y-%m-%d')
+                        break
+                    except:
+                        pass
 
         trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date,account_ids=options.account)
         sm.save_transactions(trans)
