@@ -52,14 +52,12 @@ class PlaidAccess():
                                 offset=len(ret))
             except plaid_errors.ItemError as ex:
                 if ex.code == 'ITEM_LOGIN_REQUIRED':
-#                    try:
-                    cm.update_link_token(access_token)
-                    '''
+                    try:
+                        cm.update_link_token(access_token)
                     except:
                         print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
                         print("    %s" % ex, file=sys.stderr )
                         sys.exit(1)                        
-                    '''                       
                 else:
                     print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
                     print("    %s" % ex, file=sys.stderr )
