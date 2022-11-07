@@ -54,7 +54,9 @@ class PlaidAccess():
                 if ex.code == 'ITEM_LOGIN_REQUIRED':
                     try:
                         cm.update_link_token(access_token)
-                    except:
+                    except BaseException as e:
+                        if e.code == 0:
+                            sys.exit(0)
                         print("Unable to update plaid account [%s] due to: " % account_ids, file=sys.stderr)
                         print("    %s" % ex, file=sys.stderr )
                         sys.exit(1)                        
