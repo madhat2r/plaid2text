@@ -348,7 +348,7 @@ def update_link_token(access_token):
     with open (FILE_DEFAULTS['auth_file'], "w") as f:
         f.write(data)
 
-    print('Link token updated.\nRun \'python3 -m http.server\' from ',DEFAULT_CONFIG_DIR,' and then visit \'localhost:8200\' in your browser to complete authentication with Plaid. Then, start downloading transactions again.')
+    print('Link token updated.\nRun \'python3 -m http.server\' from ',DEFAULT_CONFIG_DIR,' and then visit \'localhost:8000\' in your browser to complete authentication with Plaid. Then, start downloading transactions again.')
     sys.exit(0)
 
 if __name__ == '__main__':
