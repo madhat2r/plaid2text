@@ -91,23 +91,11 @@ def _parse_args_and_config_file():
     # Build preparser with only plaid account
     preparser = argparse.ArgumentParser(prog='Plaid2Text', add_help=False)
     preparser.add_argument(
-        'plaid_account',
-        nargs='?',
+        'plaid_accounts',
+        nargs='*',
         help=(
-            'Nickname of Plaid account to use'
+            'Nickname of Plaid accounts to use'
             ' (Example: {0})'.format('boa_checking')
-        )
-    )
-
-    preparser.add_argument(
-        'outfile',
-        nargs='?',
-        metavar='FILE',
-        type=FileType('w', encoding='utf-8'),
-        default=sys.stdout,
-        help=(
-            'output filename or stdout in Ledger/Beancount syntax'
-            ' (default: {0})'.format('stdout')
         )
     )
 
@@ -115,355 +103,373 @@ def _parse_args_and_config_file():
     args, remaining_argv = preparser.parse_known_args()
 
     if "--create-account" in remaining_argv:
-        cm.create_account(args.plaid_account)
+        for acc in args.plaid_accounts:
+            cm.create_account(acc)
+    
+    # If no account is specified, process all accounts
+    if not args.plaid_accounts and 'help' not in args:
+        args.plaid_accounts=cm.get_configured_accounts()
+    defaults = []
+    for acc in args.plaid_accounts:
+        defaultConfig = cm.get_config(acc) if args.plaid_accounts else {}
+        defaultConfig.update({'plaid_account':acc})
+        defaults.append(defaultConfig)
 
-    defaults = cm.get_config(args.plaid_account) if args.plaid_account else {}
-    # defaults = cm.CONFIG_DEFAULTS
-
+    argsSet = []
+    for acc in defaults:
     # Build parser for args on command line
-    parser = argparse.ArgumentParser(
-        prog='Plaid2Text',
-        # Don't surpress add_help here so it will handle -h
-        # print script description with -h/--help
-        description=__doc__,
-        parents=[preparser],
-        # sort options alphabetically
-        formatter_class=SortingHelpFormatter
-    )
+        parser = argparse.ArgumentParser(
+            prog='Plaid2Text',
+            # Don't suppress add_help here so it will handle -h
+            # print script description with -h/--help
+            description=__doc__,
+            parents=[preparser],
+            # sort options alphabetically
+            formatter_class=SortingHelpFormatter
+        )
 
-    parser.set_defaults(**defaults)
-    parser.add_argument(
-        '--accounts-file',
-        metavar='FILE',
-        help=(
-            'file which holds a list of account names (LEDGER ONLY)'
-            ' (default : {0})'.format(cm.FILE_DEFAULTS.accounts_file)
+        parser.set_defaults(**acc)
+        parser.add_argument(
+            '--outfile',
+            '-o',
+            metavar='FILE',
+            type=FileType('w', encoding='utf-8'),
+            default=sys.stdout,
+            help=(
+                'output filename or stdout in Ledger/Beancount syntax'
+                ' (default: {0})'.format('stdout')
+            )
         )
-    )
-    parser.add_argument(
-        '--headers-file',
-        metavar='FILE',
-        help=(
-            'file which contains contents to be written to the top of the output file'
-            ' (default : {0})'.format(cm.FILE_DEFAULTS.headers_file)
+        parser.add_argument(
+            '--accounts-file',
+            metavar='FILE',
+            help=(
+                'file which holds a list of account names (LEDGER ONLY)'
+                ' (default : {0})'.format(cm.FILE_DEFAULTS.accounts_file)
+            )
         )
-    )
-    parser.add_argument(
-        '--create-account',
-        action='store_true',
-        help=(
-            'create a new account'
-            ' (default : {0})'.format(cm.CONFIG_DEFAULTS.create_account)
+        parser.add_argument(
+            '--headers-file',
+            metavar='FILE',
+            help=(
+                'file which contains contents to be written to the top of the output file'
+                ' (default : {0})'.format(cm.FILE_DEFAULTS.headers_file)
+            )
         )
-    )
+        parser.add_argument(
+            '--create-account',
+            action='store_true',
+            help=(
+                'create a new account'
+                ' (default : {0})'.format(cm.CONFIG_DEFAULTS.create_account)
+            )
+        )
 
-    parser.add_argument(
-        '--output-format',
-        '-o',
-        choices=['beancount', 'ledger'],
-        help=(
-            'what format to use for the output file.'
-            ' (default format: {})'.format(cm.CONFIG_DEFAULTS.output_format)
+        parser.add_argument(
+            '--output-format',
+            choices=['beancount', 'ledger'],
+            help=(
+                'what format to use for the output file.'
+                ' (default format: {})'.format(cm.CONFIG_DEFAULTS.output_format)
+            )
         )
-    )
-    parser.add_argument(
-        '--posting-account',
-        '-a',
-        metavar='STR',
-        help=(
-            'posting account used as source'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.posting_account)
+        parser.add_argument(
+            '--posting-account',
+            '-a',
+            metavar='STR',
+            help=(
+                'posting account used as source'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.posting_account)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--journal-file',
-        '-j',
-        metavar='FILE',
-        help=(
-            'journal file where to read payees/accounts\n'
-            'Tip: you can use includes to pull in your other journal files'
-            ' (default journal file: {0})'.format(cm.FILE_DEFAULTS.journal_file)
+        parser.add_argument(
+            '--journal-file',
+            '-j',
+            metavar='FILE',
+            help=(
+                'journal file where to read payees/accounts\n'
+                'Tip: you can use includes to pull in your other journal files'
+                ' (default journal file: {0})'.format(cm.FILE_DEFAULTS.journal_file)
+            )
         )
-    )
-    parser.add_argument(
-        '--quiet',
-        '-q',
-        action='store_true',
-        help=(
-            'do not prompt if account can be deduced from mappings'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.quiet)
+        parser.add_argument(
+            '--quiet',
+            '-q',
+            action='store_true',
+            help=(
+                'do not prompt if account can be deduced from mappings'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.quiet)
+            )
         )
-    )
-    parser.add_argument(
-        '--download-transactions',
-        '-d',
-        action='store_true',
-        help=(
-            'download transactions into Mongo for given plaid account'
+        parser.add_argument(
+            '--download-transactions',
+            '-d',
+            action='store_true',
+            help=(
+                'download transactions into Mongo for given plaid account'
+            )
         )
-    )
 
-    parser.add_argument(
-        '--dbtype',
-        choices=['mongodb', 'sqlite'],
-        help=(
-            'The type of database to use for storing transactions [mongodb | sqlite]'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.dbtype)
+        parser.add_argument(
+            '--dbtype',
+            choices=['mongodb', 'sqlite'],
+            help=(
+                'The type of database to use for storing transactions [mongodb | sqlite]'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.dbtype)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--mongo-db',
-        metavar='STR',
-        help=(
-            'The name of the Mongo database'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db)
+        parser.add_argument(
+            '--mongo-db',
+            metavar='STR',
+            help=(
+                'The name of the Mongo database'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--mongo-db-uri',
-        metavar='STR',
-        help=(
-            'The URI for your MongoDB in the MongoDB URI format'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db_uri)
+        parser.add_argument(
+            '--mongo-db-uri',
+            metavar='STR',
+            help=(
+                'The URI for your MongoDB in the MongoDB URI format'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.mongo_db_uri)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--sqlite-db',
-        metavar='STR',
-        help=(
-            'The path to the SQLite database for storing transactions'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.sqlite_db)
+        parser.add_argument(
+            '--sqlite-db',
+            metavar='STR',
+            help=(
+                'The path to the SQLite database for storing transactions'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.sqlite_db)
+            )
         )
-    )
-    parser.add_argument(
-        '--default-expense',
-        metavar='STR',
-        help=(
-            'expense account used as default destination'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.default_expense)
+        parser.add_argument(
+            '--default-expense',
+            metavar='STR',
+            help=(
+                'expense account used as default destination'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.default_expense)
+            )
         )
-    )
-    parser.add_argument(
-        '--cleared-character',
-        choices='*!',
-        help=(
-            'character to clear a transaction'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.cleared_character)
+        parser.add_argument(
+            '--cleared-character',
+            choices='*!',
+            help=(
+                'character to clear a transaction'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.cleared_character)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--output-date-format',
-        metavar='STR',
-        help=(
-            'date format for output file'
-            ' (default: YYYY/MM/DD)'
+        parser.add_argument(
+            '--output-date-format',
+            metavar='STR',
+            help=(
+                'date format for output file'
+                ' (default: YYYY/MM/DD)'
+            )
         )
-    )
 
-    parser.add_argument(
-        '--currency',
-        metavar='STR',
-        help=(
-            'the currency of amounts'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.currency)
+        parser.add_argument(
+            '--currency',
+            metavar='STR',
+            help=(
+                'the currency of amounts'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.currency)
+            )
         )
-    )
 
-    parser.add_argument(
-        '--mapping-file',
-        metavar='FILE',
-        help=(
-            'file which holds the mappings'
-            ' (default: {0})'
-            .format(cm.FILE_DEFAULTS.mapping_file)
+        parser.add_argument(
+            '--mapping-file',
+            metavar='FILE',
+            help=(
+                'file which holds the mappings'
+                ' (default: {0})'
+                .format(cm.FILE_DEFAULTS.mapping_file)
+            )
         )
-    )
-    parser.add_argument(
-        '--template-file',
-        metavar='FILE',
-        help=(
-            'file which holds the template'
-            ' (default: {0})'
-            .format(cm.FILE_DEFAULTS.template_file)
+        parser.add_argument(
+            '--template-file',
+            metavar='FILE',
+            help=(
+                'file which holds the template'
+                ' (default: {0})'
+                .format(cm.FILE_DEFAULTS.template_file)
+            )
         )
-    )
-    parser.add_argument(
-        '--tags',
-        '-t',
-        action='store_true',
-        help=(
-            'prompt for transaction tags'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.tags)
+        parser.add_argument(
+            '--tags',
+            '-t',
+            action='store_true',
+            help=(
+                'prompt for transaction tags'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.tags)
+            )
         )
-    )
-    parser.add_argument(
-        '--clear-screen',
-        '-C',
-        action='store_true',
-        help=(
-            'clear screen for every transaction'
-            ' (default: {0})'.format(cm.CONFIG_DEFAULTS.clear_screen)
+        parser.add_argument(
+            '--clear-screen',
+            '-C',
+            action='store_true',
+            help=(
+                'clear screen for every transaction'
+                ' (default: {0})'.format(cm.CONFIG_DEFAULTS.clear_screen)
+            )
         )
-    )
-    parser.add_argument(
-        '--no-mark-pulled',
-        '-n',
-        action='store_true',
-        default=False,
-        help=(
-            'Do not mark pulled transactions. '
-            'When given, the pulled transactions will still be listed '
-            'as new transactions upon the next run.'
-            ' (default: False)'
+        parser.add_argument(
+            '--no-mark-pulled',
+            '-n',
+            action='store_true',
+            default=False,
+            help=(
+                'Do not mark pulled transactions. '
+                'When given, the pulled transactions will still be listed '
+                'as new transactions upon the next run.'
+                ' (default: False)'
+            )
         )
-    )
 
-    parser.add_argument(
-        '--all-transactions',
-        action='store_true',
-        help=(
-            'pull all transactions even those who have been previously marked as processed'
-            ' (default: False'
+        parser.add_argument(
+            '--all-transactions',
+            action='store_true',
+            help=(
+                'pull all transactions even those who have been previously marked as processed'
+                ' (default: False'
+            )
         )
-    )
 
-    parser.add_argument(
-        '--to-date',
-        metavar='STR',
-        help=(
-            'specify the ending date for transactions to be pulled; '
-            'use in conjunction with --from-date to specify range'
-            'Date format: YYYY-MM-DD'
+        parser.add_argument(
+            '--to-date',
+            metavar='STR',
+            help=(
+                'specify the ending date for transactions to be pulled; '
+                'use in conjunction with --from-date to specify range'
+                'Date format: YYYY-MM-DD'
+            )
         )
-    )
 
-    parser.add_argument(
-        '--from-date',
-        metavar='STR',
-        help=(
-            'specify a the starting date for transactions to be pulled; '
-            'use in conjunction with --to-date to specify range'
-            'Date format: YYYY-MM-DD'
+        parser.add_argument(
+            '--from-date',
+            metavar='STR',
+            help=(
+                'specify a the starting date for transactions to be pulled; '
+                'use in conjunction with --to-date to specify range'
+                'Date format: YYYY-MM-DD'
+            )
         )
-    )
 
-    # TODO NEED TO FIX - USING PARENTS causes file to be opened twice
-    args = parser.parse_args()
+        # TODO NEED TO FIX - USING PARENTS causes file to be opened twice
+        args = parser.parse_args()
 
-    args.journal_file = cm.find_first_file(
-        args.journal_file,
-        cm.FILE_DEFAULTS.journal_file
-    )
-    args.mapping_file = cm.find_first_file(
-        args.mapping_file,
-        cm.FILE_DEFAULTS.mapping_file
-    )
-    args.accounts_file = cm.find_first_file(
-        args.accounts_file,
-        cm.FILE_DEFAULTS.accounts_file
-    )
-    args.template_file = cm.find_first_file(
-        args.template_file,
-        cm.FILE_DEFAULTS.template_file
-    )
-    args.headers_file = cm.find_first_file(
-        args.headers_file,
-        cm.FILE_DEFAULTS.headers_file
-    )
-    # Make sure we have a plaid account and we are not calling --help
-    if not args.plaid_account and 'help' not in args:
-        print('You must provide the Plaid account as the first argument',
-              file=sys.stderr)
-        sys.exit(1)
+        args.journal_file = cm.find_first_file(
+            args.journal_file,
+            cm.FILE_DEFAULTS.journal_file
+        )
+        args.mapping_file = cm.find_first_file(
+            args.mapping_file,
+            cm.FILE_DEFAULTS.mapping_file
+        )
+        args.accounts_file = cm.find_first_file(
+            args.accounts_file,
+            cm.FILE_DEFAULTS.accounts_file
+        )
+        args.template_file = cm.find_first_file(
+            args.template_file,
+            cm.FILE_DEFAULTS.template_file
+        )
+        args.headers_file = cm.find_first_file(
+            args.headers_file,
+            cm.FILE_DEFAULTS.headers_file
+        )
 
-    if args.from_date:
-        y, m, d = [int(i) for i in re.split(r'[/-]', args.from_date)]
-        args.from_date = datetime(y, m, d)
+        if args.from_date:
+            y, m, d = [int(i) for i in re.split(r'[/-]', args.from_date)]
+            args.from_date = datetime(y, m, d)
 
-    if args.to_date:
-        y, m, d = [int(i) for i in re.split(r'[/-]', args.to_date)]
-        args.to_date = datetime(y, m, d)
+        if args.to_date:
+            y, m, d = [int(i) for i in re.split(r'[/-]', args.to_date)]
+            args.to_date = datetime(y, m, d)
 
-    return args
+        argsSet.append(args)
+
+    return argsSet
 
 
 def main():
     # Make sure we have config file
     if not cm.config_exists():
         return
-
-    options = _parse_args_and_config_file()
+    optionSet = _parse_args_and_config_file()
     truthy = ['true', 'yes', '1', 't']
+    # Handle multiple accounts
+    for options in optionSet:
+        print("Processing "+options.plaid_account)
     # Convert config values to Boolean if pulled from file
-    if not isinstance(options.quiet, bool):
-        options.quiet = options.quiet.lower() in truthy
-    if not isinstance(options.tags, bool):
-        options.tags = options.tags.lower() in truthy
-    if not isinstance(options.clear_screen, bool):
-        options.clear_screen = options.clear_screen.lower() in truthy
+        if not isinstance(options.quiet, bool):
+            options.quiet = options.quiet.lower() in truthy
+        if not isinstance(options.tags, bool):
+            options.tags = options.tags.lower() in truthy
+        if not isinstance(options.clear_screen, bool):
+            options.clear_screen = options.clear_screen.lower() in truthy
 
-    if options.dbtype == 'mongodb':
-        sm = storage_manager.MongoDBStorage(
-            options.mongo_db,
-            options.mongo_db_uri,
-            options.plaid_account,
-            options.posting_account
-        )
-    else:
-        sm = storage_manager.SQLiteStorage(
-            options.sqlite_db,
-            options.plaid_account,
-            options.posting_account
-        )
+        if options.dbtype == 'mongodb':
+            sm = storage_manager.MongoDBStorage(
+                options.mongo_db,
+                options.mongo_db_uri,
+                options.plaid_account,
+                options.posting_account
+            )
+        else:
+            sm = storage_manager.SQLiteStorage(
+                options.sqlite_db,
+                options.plaid_account,
+                options.posting_account
+            )
 
-    if options.download_transactions:
-        if 'to_date' not in options or options.to_date == None:
-            options.to_date  = datetime.today()
-        if 'from_date' not in options or options.from_date == None:
-            try:
-                options.from_date = sm.get_latest_transaction_date() - timedelta(days=10)
-            except:
-                while True:
-                    date_input = input('Enter the starting date from which to fetch transactions in YYYY-MM-DD format, or press Ctrl + C to quit:\n')
-                    try:
-                        options.from_date = datetime.strptime(date_input, '%Y-%m-%d')
-                        break
-                    except:
-                        pass
+        if options.download_transactions:
+            if 'to_date' not in options or options.to_date == None:
+                options.to_date  = datetime.today()
+            if 'from_date' not in options or options.from_date == None:
+                try:
+                    options.from_date = sm.get_latest_transaction_date() - timedelta(days=10)
+                except:
+                    while True:
+                        date_input = input('Enter the starting date from which to fetch transactions in YYYY-MM-DD format, or press Ctrl + C to quit:\n')
+                        try:
+                            options.from_date = datetime.strptime(date_input, '%Y-%m-%d')
+                            break
+                        except:
+                            pass
+            trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date,account_ids=options.account)
+            sm.save_transactions(trans)
+            print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
+            if options == optionSet[-1]:
+                sys.exit(0)
 
-        trans = PlaidAccess().get_transactions(options.access_token, start_date=options.from_date, end_date=options.to_date,account_ids=options.account)
-        sm.save_transactions(trans)
-        print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
-        sys.exit(0)
+        if not options.config_file:
+            print('Configuration file is required.', file=sys.stderr)
+            sys.exit(1)
 
-    if not options.config_file:
-        print('Configuration file is required.', file=sys.stderr)
-        sys.exit(1)
+        to_date = None if 'to_date' not in options else options.to_date
+        from_date = None if 'from_date' not in options else options.from_date
+        only_new = not options.all_transactions
 
-    to_date = None if 'to_date' not in options else options.to_date
-    from_date = None if 'from_date' not in options else options.from_date
-    only_new = not options.all_transactions
+        trxs = sm.get_transactions(to_date=to_date,
+                                from_date=from_date,
+                                only_new=only_new)
 
-    trxs = sm.get_transactions(to_date=to_date,
-                               from_date=from_date,
-                               only_new=only_new)
+        if options.output_format == 'beancount':
+            out = BeancountRenderer(trxs, options)
+        else:
+            out = LedgerRenderer(trxs, options)
 
-    if options.output_format == 'beancount':
-        out = BeancountRenderer(trxs, options)
-    else:
-        out = LedgerRenderer(trxs, options)
+        callback = lambda dict: sm.update_transaction(dict, mark_pulled=not options.no_mark_pulled)
 
-    callback = lambda dict: sm.update_transaction(dict, mark_pulled=not options.no_mark_pulled)
-
-    try:
-        update_dict = out.process_transactions(callback=callback)
-    except (KeyboardInterrupt, EOFError):
-        print("\nProcess interrupted by keyboard interrupt.");
+        try:
+            update_dict = out.process_transactions(callback=callback)
+        except (KeyboardInterrupt, EOFError):
+            print("\nProcess interrupted by keyboard interrupt.");
 
 if __name__ == '__main__':
     main()

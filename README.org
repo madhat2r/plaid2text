@@ -148,8 +148,7 @@ lengths of time.
 * Arguments Summary
 
 #+BEGIN_SRC
-plaid_account: (mandantory) this is the nickname you assigned when creating account
-outfile: output filename or stdout in your chosen snytax (ledger,beancount)
+plaid_account: this is the nickname you assigned when creating account. If =plaid_account= is not provided, all accounts in the config file will be processed.
 #+END_SRC
 
 *Note*: the outfile will be _overwritten_ each time this is run so be careful
@@ -201,6 +200,8 @@ command line options take precedence over config file settings.
                         Do not mark pulled transactions. When given, the
                         pulled transactions will still be listed as new
                         transactions upon the next run. (default: False)
+  --outfile FILE, -o FILE
+                        output filename or stdout in your chosen syntax (ledger,beancount).
   --output-date-format STR
                         date format for output file (default: YYYY/MM/DD)
   --output-format {beancount,ledger}, -o {beancount,ledger}
@@ -356,14 +357,14 @@ The following will download all new transactions for the account
     after setting up the account. This gives Plaid time to pull your
     transactions from the institution.
 
-~plaid2text chase_checking --downlad-transactions~
+~plaid2text chase_checking --download-transactions~
 
 The following will pull all new  transactions for account
 =chase_checking= and output them to =/tmp/onetime.ldg= Ledger syntax
 after prompting you for the correct information for every transaction and
 marking all pulled transaction in the database as pulled.
 
-~plaid2text chase_checking /tmp/onetime.ldg --output-format ledger~
+~plaid2text chase_checking -o=/tmp/onetime.ldg --output-format=ledger~
 
 The following will pull *all* transactions starting from the given date for the
 =chase_checking= account and will not mark them as pulled in the database, and
@@ -391,7 +392,7 @@ transactions, and also prompt for tags (=--tags=) and suppress prompting for
 known transactions via our mappings (=--quiet=), we will also be using
 =beancount= output syntax (=--output-format=).
 
-~plaid2text chase_checking /tmp/onetime.bnc --quiet --tags --output-format beancount~
+~plaid2text chase_checking -o=/tmp/onetime.bnc --quiet --tags --output-format=beancount~
 
 When the above command is run, you will be presented with a prompt for the first
 non-matched transaction. The first prompt is for the payee. You will notice that
