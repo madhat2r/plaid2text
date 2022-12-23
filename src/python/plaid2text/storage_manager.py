@@ -95,6 +95,13 @@ class MongoDBStorage(StorageManager):
     def get_latest_transaction_date(self):
         latest = list(self.account.find().sort("date", DESCENDING).limit(1))[0]['date']
         return latest
+    
+    # check if an account has unpulled transactions
+    def check_pending(self):
+        query = {'plaid2text.pulled_to_file':{"$ne": True}}
+        unpulled = list(self.account.find(query))
+        pending = len(unpulled) > 0
+        return pending
 
 class SQLiteStorage():
     def __init__(self, dbpath, account, posting_account):

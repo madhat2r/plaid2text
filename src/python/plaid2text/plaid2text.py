@@ -329,7 +329,16 @@ def _parse_args_and_config_file():
                 ' (default: False)'
             )
         )
-
+        parser.add_argument(
+            '--pending-accounts',
+            '-p',
+            action='store_true',
+            default=False,
+            help=(
+                'Show accounts with unpulled transactions in database'
+                ' (default: False)'
+            )
+        )
         parser.add_argument(
             '--all-transactions',
             action='store_true',
@@ -402,9 +411,10 @@ def main():
         return
     optionSet = _parse_args_and_config_file()
     truthy = ['true', 'yes', '1', 't']
+    if optionSet[0].pending_accounts:
+        pending = []
     # Handle multiple accounts
     for options in optionSet:
-        print("Processing "+options.plaid_account)
     # Convert config values to Boolean if pulled from file
         if not isinstance(options.quiet, bool):
             options.quiet = options.quiet.lower() in truthy
@@ -427,7 +437,23 @@ def main():
                 options.posting_account
             )
 
+        if options.pending_accounts:
+            include = sm.check_pending()
+            if include:
+                pending.append(options.plaid_account)
+            if options == optionSet[-1]:
+                if len(pending) == 0:
+                    print('All transactions in all accounts have been processed')
+                else:
+                    print('\nThe following accounts have unpulled transactions:')
+                    for p in pending:
+                        print(p)
+                sys.exit(0)
+            else:
+                continue
+
         if options.download_transactions:
+            print("Downloading transactions for "+options.plaid_account)
             if 'to_date' not in options or options.to_date == None:
                 options.to_date  = datetime.today()
             if 'from_date' not in options or options.from_date == None:
@@ -446,11 +472,13 @@ def main():
             print('Transactions successfully downloaded and saved into %s' % options.dbtype, file=sys.stdout)
             if options == optionSet[-1]:
                 sys.exit(0)
+            else:
+                continue
 
         if not options.config_file:
             print('Configuration file is required.', file=sys.stderr)
             sys.exit(1)
-
+        print("Processing "+options.plaid_account)
         to_date = None if 'to_date' not in options else options.to_date
         from_date = None if 'from_date' not in options else options.from_date
         only_new = not options.all_transactions
